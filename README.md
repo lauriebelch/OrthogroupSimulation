@@ -1,5 +1,7 @@
 # OrthoSim
 
+![orthosim logo](https://github.com/lauriebelch/OrthogroupSimulation/blob/main/OrthoSim.png)
+
 OrthoSim is a realistic orthogroup simulator, providing proteomes where we know exactly which genes are in which orthogroup, and whether they are orthologs or paralogs
 
 ## How do I use it?
