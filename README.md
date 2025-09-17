@@ -1,4 +1,4 @@
-# OrthogroupSimulation
+# OrthoSim
 
 OrthoSim is a realistic orthogroup simulator, providing proteomes where we know exactly which genes are in which orthogroup, and whether they are orthologs or paralogs
 
