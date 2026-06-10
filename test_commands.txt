@@ -1,6 +1,4 @@
 
-### unzip PFAM.zip to get the PFAM folder
-
 #### TEST THE GET PARAMETERS BIT ######
 
 python OrthoSim.py \
