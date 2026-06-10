@@ -1,0 +1,34 @@
+
+### unzip PFAM.zip to get the PFAM folder
+
+#### TEST THE GET PARAMETERS BIT ######
+
+python OrthoSim.py \
+    --Get-Parameters \
+    --output ../OrthoTrain_analysis/Training_FastOMA \
+    --tool FASTOMA \
+    --tool-output /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_output \
+    --tools-proteomes /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_input \
+    --tool-tree /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_output/species_tree_checked.nwk \
+    --threads 32
+
+## rm -rf ../OrthoTrain_analysis/Training_FastOMA
+
+#### TEST THE STANDALONE SIMULATION BIT ####
+
+python OrthoSim.py \
+  --Orthogroup-simulation \
+  --output ../OrthoTrain_analysis/test_orthosim_run \
+  --Config ExampleData/example_simulation_config.txt --threads 32
+
+## rm -rf ../OrthoTrain_analysis/test_orthosim_run
+
+#### TEST THE PFAM DOMAIN EXTRACTION BIT ####
+
+python OrthoSim.py \
+  --PFAM \
+  --output ../OrthoTrain_analysis/pfam_test_run \
+  --Proteome ExampleData/pfam_genome.fa \
+  --threads 32
+
+## rm -rf ../OrthoTrain_analysis/pfam_test_run
