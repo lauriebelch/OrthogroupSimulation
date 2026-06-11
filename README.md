@@ -72,7 +72,7 @@ python OrthoSim.py --Orthogroup-simulation [options]
 These options are shared by multiple workflows.
 
 | Option | Meaning |
-|---|---|---|
+|---|---|
 | `--output OUTPUT` | Path to the output directory |
 | `--threads THREADS` | Number of threads. Default is `1`.|
 
@@ -114,16 +114,17 @@ python OrthoSim.py \
 | `--Config PATH_TO_CONFIG_FILE` | Optional | Path to a config file containing simulation parameters. |
 | `--threads THREADS` | Optional | Number of threads to use. Default is `1`. |
 
-These options are required unless provided in the config file
+The options below are required unless provided in the [config file](#config-files). See [Simulation config parameters](#simulation-config-parameters) for an explanation of each parameter.
+
 | Option | Meaning |
 |---|---|
-| `--ultrametric-tree TREE_PATH` | Path to the input ultrametric species tree in Newick format. |
-| `--species SPECIES_NAME` | Starting/focal species used to seed simulated orthogroups with real protein sequences. |
+| `--ultrametric-tree TREE_PATH` | Path to ultrametric species tree in Newick format. |
+| `--species SPECIES_NAME` | Starting species used to seed simulated orthogroups |
 | `--Orthogroups NUMBER_OF_ORTHOGROUPS` | Number of orthogroups to simulate. |
-| `--prop-invar-mean FLOAT` | Mean parameter for the distribution of the proportion of invariant sites. |
-| `--prop-invar-sd FLOAT` | Standard deviation parameter for the distribution of the proportion of invariant sites. |
-| `--gamma-shape-mean FLOAT`  | Mean parameter for the gamma shape distribution controlling among-site rate variation. |
-| `--gamma-shape-sd FLOAT` | Standard deviation parameter for the gamma shape distribution. |
+| `--prop-invar-mean FLOAT` | Mean proportion of invariant sites. |
+| `--prop-invar-sd FLOAT` | Standard deviation of the proportion of invariant sites. |
+| `--gamma-shape-mean FLOAT`  | Mean gamma shape distribution (controlling among-site rate variation.) |
+| `--gamma-shape-sd FLOAT` | Standard deviation of gamma shape distribution. |
 | `--max-indel-insert FLOAT` | Maximum insertion rate. |
 | `--max-indel-delete FLOAT` | Maximum deletion rate. |
 | `--indel-size FLOAT` | Indel-size parameter |
@@ -131,11 +132,11 @@ These options are required unless provided in the config file
 | `--max-loss-rate FLOAT` | Maximum gene loss rate. |
 | `--max-transfer-rate FLOAT`| Maximum horizontal transfer rate. |
 | `--replacement-prob FLOAT` | Transfer replacement probability. |
-| `--leaf-sampling-probability FLOAT`| Probability of retaining/sampling leaves in the simulated gene tree. |
+| `--leaf-sampling-probability FLOAT`| Probability of retaining leaves in the simulated gene tree. |
 | `--relax-model STR` | Branch-rate relaxation model, for example `ACRY07`. |
-| `--max-start-rate FLOAT` | Starting branch-rate value for branch relaxation. Usually `1`. |
-| `--sigma-log-mean FLOAT` | Mean of the log-space distribution used to sample branch-relaxation sigma. |
-| `--sigma-log-sd FLOAT` | Standard deviation of the log-space distribution used to sample branch-relaxation sigma. |
+| `--max-start-rate FLOAT` | Starting branch-rate value for branch relaxation. |
+| `--sigma-log-mean FLOAT` | Mean of the log-space distribution for branch-relaxation sigma. |
+| `--sigma-log-sd FLOAT` | Standard deviation of the log-space distribution for branch-relaxation sigma. |
 | `--gbc FLOAT` | Orthogroup birth-bias / phylostratigraphy parameter. |
 | `--gap-file PATH_TO_GAP_PROFILE` | Path to the empirical gap-position profile file. |
 
@@ -252,14 +253,30 @@ Orthogroups=100
 
 ## How the simulations are generated
 
-Explain how they are generated
+OrthoSim simulates orthogroups by combining empirical parameter sampling with gene-tree and sequence simulation.
+
+Each simulated orthogroup is seeded with a real protein sequence from the chosen starting species. A gene tree is then generated using SaGePhy, with duplication, loss, and orthogroup birth parameters taken from the simulation config file. Branch lengths are relaxed using SaGePhy branch-rate relaxation.
+
+Protein sequence evolution is simulated using IQ-TREE AliSim. The background model uses empirical sequence-evolution parameters, including the proportion of invariant sites and gamma-distributed among-site rate variation.
+
+OrthoSim divides each seed protein into PFAM-domain and non-domain regions. Domain regions are simulated using PFAM-specific substitution models and lower evolutionary rates, while non-domain regions use the background model.
 
 ## Output
 
 ## Benchmarking orthology inference methods
 
-## Current notes and TODOs
+OrthoSim simulations can be used to benchmark orthology inference methods because the complete ground truth is known.
+
+For each simulated dataset, OrthoSim records:
+- the true orthogroup membership of every simulated gene
+- the true ortholog pairs among all simulated genes
+- the simulated gene trees used to generate the data
+
+This means that the output of an orthology inference method can be compared directly against the true simulated relationships. 
 
 ## Citation
+
+**All Aboard the OrthoTrain: empirically trained simulations for benchmarking orthology inference**
+L. Belcher, J. H. Homes, and S. Kelly 
 
 ## Contact
