@@ -1,6 +1,5 @@
 output=GA_TEST_OUTPUT
 parameter_folder=PARAMETERS_FOLDER
-species=HOMO_ERECTUS
 generations=10
 sample_size=100
 num_parents_mating=4

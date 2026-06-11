@@ -1040,6 +1040,7 @@ def OrthologParsing(outname):
 # below is the old RunOrthogroup that didnt use multiproc
 ## main function to simulate an orthogroup
 def RunOrthogroup(outname):
+    #LoadParameters
     SimulateGeneTree(outname)
     RelaxBranchLengths(outname)
     RelabelRelaxedTree(outname)

@@ -172,8 +172,10 @@ def configure_legacy_args(args, config):
 
     args.o = os.path.abspath(args.output)
     args.n = int(require_config(config, "Orthogroups"))
-    args.s = resolve_path(require_config(config, "ultrametric_tree"), project_root)
-    args.gap_profile = resolve_path(require_config(config, "gap_file"), project_root)
+    #args.s = resolve_path(require_config(config, "ultrametric_tree"), project_root)
+    args.s = require_config(config, "ultrametric_tree")
+    #args.gap_profile = resolve_path(require_config(config, "gap_file"), project_root)
+    args.gap_profile = require_config(config, "gap_file")
 
     # pfam_species allows domain species to differ from the species-tree label.
     # If absent, use species.
@@ -403,9 +405,8 @@ def main():
     og.THREADS = args.threads
 
     print_detected_inputs(args)
-
     mp.set_start_method("spawn", force=True)
-
+ 
     og.RunOrthogroupMultiProc(
         n=args.n,
         outdir=args.o,

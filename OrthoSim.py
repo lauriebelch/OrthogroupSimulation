@@ -89,7 +89,8 @@ def args_dicts():
                 "mutation_type":["--mutation-type","str"],
                 "mutation_percent_genes":["--mutation-percent-genes","int"],
                 "save_solutions":["--save-solutions","bool"],
-                "parallel_processing":["--parallel-processing","int"]
+                "parallel_processing":["--parallel-processing","int"],
+                "OrthoTrainResults":["--Orthogroup-train-results","Path to an orthogroup train folder see --Get-Parameters"]
         
         }
                
@@ -101,7 +102,7 @@ def args_dicts():
             "Tool-output":["--tool-output","PATH_TO_TOOL_OUTPUT"],
             "Tool-tree":["--tool-tree","PATH_TO_TOOL_TREE required for: Brocoli & SonicParanoid2"],
             "Tool_input_Proteomes":["--tools-proteomes","PATH_TO_TOOLS_PROTEOMES required for: FastOMA, Brocoli, SonicParanoid2"],
-            "GA_scores":["--parameter-folder","PATH_TO_PARAMETERS note: output of --Get-Parameters"],
+            #"GA_scores":["--parameter-folder","PATH_TO_PARAMETERS note: output of --Get-Parameters"],
             "Config":["--Config","PATH_TO_CONFIG FILE"],
             }
 
@@ -114,8 +115,8 @@ def arg_parse_reformat(l):
 def requirements_dicts():
     args,args_og_sim,args_GA,args_shared = args_dicts()
     requirement_dict = {
-        "og_sim" : arg_parse_reformat([args["output"],args["Input_Tree"],args["Species"],args_shared["Config"],args_shared["OG_num"]] + list(args_og_sim.values())),
-        "GA" : arg_parse_reformat([args["output"],args_shared["GA_scores"],args["Species"],args_shared["OG_num"]] +list(args_GA.values())), 
+        "og_sim" : arg_parse_reformat([args["output"],args["Input_Tree"],args["Species"],args_shared["OG_num"]] + list(args_og_sim.values())),
+        "GA" : arg_parse_reformat([args["output"],args_shared["OG_num"]] +list(args_GA.values())), 
         "get_data" : arg_parse_reformat([args["output"],args_shared["tool"],args_shared["Tool-output"],args_shared["Tool-tree"],args_shared["Tool_input_Proteomes"]]),
         "PFAM" : arg_parse_reformat([args["output"],args["Proteome"]])}
     return requirement_dict
@@ -149,7 +150,7 @@ Provide Data for parameters : thing about it : supported options = OF3, FastOMA.
         )
     )
 
-    GA_help_list  = [args["output"],args_shared["GA_scores"],args["Species"]] +list(args_GA.values())
+    GA_help_list  = [args["output"]] +list(args_GA.values())
     GA_help = [" ".join(i) for i in GA_help_list]
     parser.add_argument(
         "--GA",
@@ -192,14 +193,24 @@ Provide Data for parameters : thing about it : supported options = OF3, FastOMA.
     
     for arg_dict in [args,args_og_sim,args_GA,args_shared]:
         for key, value in arg_dict.items():   
-            
-            name, description = value
-            parser.add_argument(
-                name,
-                dest = name.lstrip('-').replace("-","_"),
-                default=None,
-                help=argparse.SUPPRESS
-            )
+
+            if key in ["Config"]: ### optional flags
+                name, description = value
+                parser.add_argument(
+                    name,
+                    dest = name.lstrip('-').replace("-","_"),
+                    default=None,
+                    help=argparse.SUPPRESS
+                )
+                
+            else:
+                name, description = value
+                parser.add_argument(
+                    name,
+                    dest = name.lstrip('-').replace("-","_"),
+                    default=None,
+                    help=argparse.SUPPRESS
+                )
 
      
 
@@ -236,14 +247,12 @@ def check_options(function_call,args):
 
     
     ############ if config is not called...
-
     if args['Config'] == None:
         missing,complete_parameters  = check_missing(requirements,args)
-
         if len(missing) != 0:
             print("The following flags are missing:\n" + ", ".join(missing))
             sys.exit()
-
+            
     elif args['Config'] != None: 
         ## test if i can find the file...
         if os.path.isfile(os.path.abspath(args['Config'])) == False:
@@ -464,7 +473,28 @@ def run_pfam(complete_parameters, output_abolsute_path, threads, current_file_pa
         print("Command:")
         print(" ".join(cmd))
         sys.exit(e.returncode)
+        
+        
+def run_GA(complete_parameters, output_abolsute_path, threads, current_file_path):
 
+    #Saccharomyces_cerevisiae.fa
+    default_species_pick = os.path.join(current_file_path,"pfam_genomes","Saccharomyces_cerevisiae.fa")
+    #default_pfam_pick =  os.path.join(current_file_path,"pfam_genomes","Saccharomyces_cerevisiae.fa")
+    
+    ### now read pass this data and pathing to the GA function calls...
+    ## import GA functionality from scripts pathing..
+    import scripts.GeneticAlgorithm.GeneticAlgorithm as GA
+    print(GA)
+    GA.GA_workflow(complete_parameters, output_abolsute_path, threads, current_file_path,default_species_pick)
+    
+    
+    
+    """
+    # below is the old RunOrthogroup that didnt use multiproc
+    ## main function to simulate an orthogroup
+    def RunOrthogroup(outname):
+    """
+    
 def Worflows():
     print("Starting Workflow...")
     args = vars(Programme_Call())
@@ -488,7 +518,7 @@ def Worflows():
         )
 
     ## if user has called 'orthogroup simulation'
-    if function_call == "get_data":
+    elif function_call == "get_data":
         run_get_parameters(
             complete_parameters,
             output_abolsute_path,
@@ -497,7 +527,7 @@ def Worflows():
         )
 
     ## if user has called 'do pfam profiling'
-    if function_call == "PFAM":
+    elif function_call == "PFAM":
             run_pfam(
                 complete_parameters,
                 output_abolsute_path,
@@ -505,6 +535,14 @@ def Worflows():
                 current_file_path
             )
     
+    elif function_call == "GA":
+        run_GA(complete_parameters,
+                        output_abolsute_path,
+                        threads,
+                        current_file_path)
+        
+    else:
+        print("Issue with function call %s is not a valid function" % function_call)
     
 if __name__ == "__main__":
     Worflows()
