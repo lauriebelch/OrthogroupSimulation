@@ -73,8 +73,8 @@ These options are shared by multiple workflows.
 
 | Option | Meaning |
 |---|---|
-| `--output OUTPUT` | Path to the output directory |
-| `--threads THREADS` | Number of threads. Default is `1`.|
+| `--output` | Path to the output directory |
+| `--threads` | Number of threads. Default is `1`.|
 
 ## Orthogroup simulation workflow
 
@@ -110,35 +110,35 @@ python OrthoSim.py \
 
 | Option | Required? | Meaning |
 |---|---:|---|
-| `--output OUTPUT` | Yes | Output directory |
-| `--Config PATH_TO_CONFIG_FILE` | Optional | Path to a config file containing simulation parameters. |
-| `--threads THREADS` | Optional | Number of threads to use. Default is `1`. |
+| `--output` | Yes | Output directory |
+| `--Config` | Optional | Path to a config file containing simulation parameters. |
+| `--threads` | Optional | Number of threads to use. Default is `1`. |
 
 The options below are required unless provided in the [config file](#config-files). See [Simulation config parameters](#simulation-config-parameters) for an explanation of each parameter.
 
 | Option | Meaning |
 |---|---|
-| `--ultrametric-tree TREE_PATH` | Path to ultrametric species tree in Newick format. |
-| `--species SPECIES_NAME` | Starting species used to seed simulated orthogroups |
-| `--Orthogroups NUMBER_OF_ORTHOGROUPS` | Number of orthogroups to simulate. |
-| `--prop-invar-mean FLOAT` | Mean proportion of invariant sites. |
-| `--prop-invar-sd FLOAT` | Standard deviation of the proportion of invariant sites. |
-| `--gamma-shape-mean FLOAT`  | Mean gamma shape distribution (controlling among-site rate variation.) |
-| `--gamma-shape-sd FLOAT` | Standard deviation of gamma shape distribution. |
-| `--max-indel-insert FLOAT` | Maximum insertion rate. |
-| `--max-indel-delete FLOAT` | Maximum deletion rate. |
-| `--indel-size FLOAT` | Indel-size parameter |
-| `--max-duplication-rate FLOAT` | Maximum gene duplication rate. |
-| `--max-loss-rate FLOAT` | Maximum gene loss rate. |
-| `--max-transfer-rate FLOAT`| Maximum horizontal transfer rate. |
-| `--replacement-prob FLOAT` | Transfer replacement probability. |
-| `--leaf-sampling-probability FLOAT`| Probability of retaining leaves in the simulated gene tree. |
-| `--relax-model STR` | Branch-rate relaxation model, for example `ACRY07`. |
-| `--max-start-rate FLOAT` | Starting branch-rate value for branch relaxation. |
-| `--sigma-log-mean FLOAT` | Mean of the log-space distribution for branch-relaxation sigma. |
-| `--sigma-log-sd FLOAT` | Standard deviation of the log-space distribution for branch-relaxation sigma. |
-| `--gbc FLOAT` | Orthogroup birth-bias / phylostratigraphy parameter. |
-| `--gap-file PATH_TO_GAP_PROFILE` | Path to the empirical gap-position profile file. |
+| `--ultrametric-tree` | Path to ultrametric species tree in Newick format. |
+| `--species` | Starting species used to seed simulated orthogroups |
+| `--Orthogroups` | Number of orthogroups to simulate. |
+| `--prop-invar-mean` | Mean proportion of invariant sites. |
+| `--prop-invar-sd ` | Standard deviation of the proportion of invariant sites. |
+| `--gamma-shape-mean `  | Mean gamma shape distribution (controlling among-site rate variation.) |
+| `--gamma-shape-sd ` | Standard deviation of gamma shape distribution. |
+| `--max-indel-insert ` | Maximum insertion rate. |
+| `--max-indel-delete ` | Maximum deletion rate. |
+| `--indel-size ` | Indel-size parameter |
+| `--max-duplication-rate ` | Maximum gene duplication rate. |
+| `--max-loss-rate ` | Maximum gene loss rate. |
+| `--max-transfer-rate `| Maximum horizontal transfer rate. |
+| `--replacement-prob ` | Transfer replacement probability. |
+| `--leaf-sampling-probability `| Probability of retaining leaves in the simulated gene tree. |
+| `--relax-model ` | Branch-rate relaxation model, for example `ACRY07`. |
+| `--max-start-rate ` | Starting branch-rate value for branch relaxation. |
+| `--sigma-log-mean ` | Mean of the log-space distribution for branch-relaxation sigma. |
+| `--sigma-log-sd ` | Standard deviation of the log-space distribution for branch-relaxation sigma. |
+| `--gbc ` | Orthogroup birth-bias / phylostratigraphy parameter. |
+| `--gap-file ` | Path to the empirical gap-position profile file. |
 
 
 ## Get-parameters workflow
@@ -159,14 +159,28 @@ python OrthoSim.py \
 ```
 ### Get-Parameters command-line options
 
-| Option | Required? | Meaning |
-|---|---:|---|
-| `--output OUTPUT` | Yes | Output directory for extracted parameters. |
-| `--tool OF3,FASTOMA,BROCOLI,SONICPARANOID2` | Yes | Orthogroup inference tool used to generate the empirical orthogroups. |
-| `--tool-output PATH_TO_TOOL_OUTPUT` | Yes | Path to the output directory or results file from the orthogroup inference tool. |
-| `--tool-tree PATH_TO_TOOL_TREE` | Required for Broccoli and SonicParanoid2 | Path to the species tree associated with the orthogroup inference run. |
-| `--tools-proteomes PATH_TO_TOOLS_PROTEOMES` | Required for FastOMA, Broccoli, and SonicParanoid2 | Path to the proteomes used as input to the orthogroup inference tool. |
-| `--threads THREADS` | Optional | Number of threads to use. Default is `1`. |
+#### Required options
+
+| Option | Allowed / default | Meaning |
+|---|---|---|
+| `--output` | NA | Output directory for extracted parameters. |
+| `--tool` | `OF3`, `FASTOMA`, `BROCOLI`, `SONICPARANOID2` | Orthogroup inference tool used to generate the empirical orthogroups. |
+| `--tool-output` | NA | Path to the output directory from the orthogroup inference run. |
+
+#### Additional requirements by tool
+
+| Tool | Additional required options | Meaning |
+|---|---|---|
+| `OF3` | None | OrthoFinder output contains the information needed for this workflow. |
+| `FASTOMA` | `--tools-proteomes` | Input proteomes are needed to map genes back to species. |
+| `BROCOLI` | `--tool-tree`, `--tools-proteomes` | The species tree and input proteomes are needed to process Broccoli output. |
+| `SONICPARANOID2` | `--tool-tree`, `--tools-proteomes` | The species tree and input proteomes are needed to process SonicParanoid2 output. |
+
+#### Optional options
+
+| Option | Allowed / default | Meaning |
+|---|---|---|
+| `--threads` | Default: `1` | Number of threads to use. |
 
 ## Genetic algorithm workflow
 
@@ -184,8 +198,8 @@ python OrthoSim.py \
 
 | Option | Required? | Meaning |
 |---|---:|---|
-| `--output OUTPUT` | Yes | Output directory for the genetic algorithm run. |
-| `--threads THREADS` | Optional | Number of threads to use. Default is `1`. |
+| `--output ` | Yes | Output directory for the genetic algorithm run. |
+| `--threads` | Optional | Number of threads to use. Default is `1`. |
 
 ## PFAM domain extraction workflow
 
@@ -207,9 +221,9 @@ python OrthoSim.py \
 
 | Option | Required? | Meaning |
 |---|---:|---|
-| `--output OUTPUT` | Yes | Output directory for the PFAM run. |
-| `--Proteome PATH_TO_PROTEOME` | Yes | Path to the proteome FASTA file. |
-| `--threads THREADS` | Optional | Number of threads to use. Default is `1`. |
+| `--output ` | Yes | Output directory for the PFAM run. |
+| `--Proteome ` | Yes | Path to the proteome FASTA file. |
+| `--threads ` | Optional | Number of threads to use. Default is `1`. |
 
 ## Config files
 
