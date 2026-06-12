@@ -28,11 +28,7 @@ import string
 import math
 import statistics
 
-# ============================================================
-# Global state and multiprocessing configuration
-# ============================================================
-
-THREADS = 64
+THREADS = 8
 
 ## multiprocessing housekeeping ##
 # placeholder for share queue
@@ -731,11 +727,6 @@ def GetGapColumnBlocks(seqs):
 def GapShuffleAlignment(outname):
     """
     Shuffle gap-containing column blocks across the whole alignment.
-
-    This version does NOT try to use domain/partition coordinates, because
-    those coordinates are based on the pre-indel root sequence and do not
-    reliably match final AliSim alignment columns.
-
     Logic:
         - find contiguous column blocks where at least one sequence has a gap
         - treat each block as a putative indel block
@@ -744,16 +735,6 @@ def GapShuffleAlignment(outname):
         - reorder the gap blocks so more gappy blocks are moved toward
           empirically gap-rich parts of alignments
         - keep non-gap columns in their original relative order
-
-    This preserves:
-        - alignment length
-        - sequence names
-        - every original alignment column
-        - shared gap patterns within a column
-        - contiguous multi-column gap blocks
-
-    This changes:
-        - where gap-containing blocks occur along the alignment
     """
     alignment_file = os.path.join(
         str(args.o),

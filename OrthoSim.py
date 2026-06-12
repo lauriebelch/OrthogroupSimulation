@@ -5,7 +5,6 @@
 
 #Simulations workflow wrapper
 
-
 import argparse
 import contextlib
 import json
@@ -17,7 +16,6 @@ import time
 from pathlib import Path
 
 from collections import Counter
-
 
 # Must be set before numpy import.
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
@@ -32,15 +30,12 @@ def path_test(args):
                 s = s + 1
     supported_tools = ["OF3","FASTOMA","BROCOLI","SONICPARANOID2"]
     test = [i.lstrip('-').replace("-","_") for i in ["--tool"]]     
-    
     for key,value in args.items():
         if key in supported_tools:
             value_ = value.lstrip().rstrip()
             if value_ not in supported_tools:
                 s = s + 1
                 print("%s is not a supported tool" % value)
-    
-    
     if s != 0:
         sys.exit()
             
@@ -51,9 +46,7 @@ def args_dicts():
             "Species": ["--species","SPECIES_NAME"],
             "Proteome": ["--Proteome","PATH_TO_PROTEOME"]}
             
-            ################################################# Orthogroups simulations 
-            
-            
+    ##### Orthogroups simulations             
     args_og_sim = {
         "prop_invar_mean":["--prop-invar-mean","float"],
         "prop_invar_sd":["--prop-invar-sd","float"],
@@ -75,7 +68,7 @@ def args_dicts():
         "gap_file":["--gap-file","PATH_TO_GAP_PROFILE"],
     } 
             
-            ################################################# GA
+    ################################################# GA
     args_GA = {
                 "num_generations":["--generations","int"],
                 "sample_size":["--sample-size","int"],
@@ -93,9 +86,8 @@ def args_dicts():
                 "OrthoTrainResults":["--Orthogroup-train-results","Path to an orthogroup train folder see --Get-Parameters"]
         
         }
-               
-            
-            ################################################# SHARED
+                 
+    ################################################# SHARED
     args_shared = {
             "OG_num":["--Orthogroups","NUMBER_OF_ORTHOGROUPS"],            
             "tool":["--tool","OF3,FASTOMA,BROCOLI,SONICPARANOID2"],
@@ -107,7 +99,6 @@ def args_dicts():
             }
 
     return args,args_og_sim,args_GA,args_shared
-
 
 def arg_parse_reformat(l):
     return [arg.lstrip('-').replace("-","_") for arg,h in l]
@@ -121,7 +112,6 @@ def requirements_dicts():
         "PFAM" : arg_parse_reformat([args["output"],args["Proteome"]])}
     return requirement_dict
                      
-
 def Programme_Call():
     parser = argparse.ArgumentParser(
         description=
@@ -188,7 +178,6 @@ Provide Data for parameters : thing about it : supported options = OF3, FastOMA.
         )
     )   
 
-    
     ###################################################################### REAL FUNCTION CALLS
     
     for arg_dict in [args,args_og_sim,args_GA,args_shared]:
@@ -224,8 +213,6 @@ Provide Data for parameters : thing about it : supported options = OF3, FastOMA.
         )
     )
     
-    
-    
     return parser.parse_args()
 
 def check_missing(requirements,args):
@@ -245,7 +232,6 @@ def check_options(function_call,args):
     #args,args_og_sim,args_GA,args_shared = args_dicts()
     requirements  = requirements_dicts()[function_call]
 
-    
     ############ if config is not called...
     if args['Config'] == None:
         missing,complete_parameters  = check_missing(requirements,args)
@@ -280,7 +266,6 @@ def check_options(function_call,args):
     return complete_parameters
     ###
     
-    
 def create_outputs_and_configs(complete_parameters,current_file_path, threads):
     ## if results folder already exisits cancel...
     ## return path to results folder path to config 
@@ -306,7 +291,6 @@ def create_outputs_and_configs(complete_parameters,current_file_path, threads):
     print("created output folder and config file")
     return output_abolsute_path,config_file_path
     
-
 def Process_Args(args,current_file_path):
     
     ## identify function call
@@ -334,8 +318,6 @@ def Process_Args(args,current_file_path):
     ### data to pass back to main commands..
     return function_call,output_abolsute_path,config_file_path,threads,complete_parameters
     
-    
-    
     # going to return function call and path containing config file...
     #os.path.abspath("path")
 
@@ -347,47 +329,18 @@ def run_orthogroup_simulation(
     current_file_path,
     config_file_path
 ):
-    """
-    Dispatch --Orthogroup-simulation to the orthogroup simulation wrapper.
+    import scripts.OrthogroupSimulation.simulate_orthogroup_main as SimMain
 
-    Orthosim.py is the master:
-    - input config is required
-    - command-line flags override that config
-    - output/config.txt contains the final merged config
-    - simulate_orthogroup_main.py reads output/config.txt
-    """
-    sim_script = os.path.join(
+    SimMain.run_orthogroup_simulation(
+        complete_parameters,
+        output_abolsute_path,
+        threads,
         current_file_path,
-        "scripts",
-        "OrthogroupSimulation",
-        "simulate_orthogroup_main.py"
+        config_file_path,
     )
-    if os.path.isfile(sim_script) == False:
-        print("ERROR: Orthogroup simulation wrapper not found:")
-        print(sim_script)
-        sys.exit(1)
-    cmd = [
-        sys.executable,
-        sim_script,
-        "--config", config_file_path,
-        "--output", output_abolsute_path,
-        "--threads", str(threads),
-    ]
-    print("Running Orthogroup simulation command:")
-    print(" ".join(cmd))
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print("ERROR: Orthogroup simulation failed.")
-        print("Command:")
-        print(" ".join(cmd))
-        sys.exit(e.returncode)
 
 ## to run the get parameters bit
 def run_get_parameters(complete_parameters, output_abolsute_path, threads, current_file_path):
-    """
-    Dispatch --Get-Parameters to the correct tool-specific training wrapper.
-    """
     tool = complete_parameters["tool"].lstrip().rstrip().upper()
     get_parameters_dir = os.path.join(
         current_file_path,
@@ -433,12 +386,6 @@ def run_get_parameters(complete_parameters, output_abolsute_path, threads, curre
 
 ## to run pfam
 def run_pfam(complete_parameters, output_abolsute_path, threads, current_file_path):
-    """
-    Dispatch --PFAM to the internal PFAM workflow wrapper.
-
-    scripts/PFAM contains code.
-    PFAM contains generated PFAM data/results.
-    """
     pfam_scripts_dir = os.path.join(
         current_file_path,
         "scripts",
@@ -546,41 +493,5 @@ def Worflows():
     
 if __name__ == "__main__":
     Worflows()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

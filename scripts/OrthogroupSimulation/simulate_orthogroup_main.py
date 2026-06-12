@@ -1,141 +1,96 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Orthogroup simulation entrypoint for Orthosim.py.
+# simulate_orthogroup_main.py
 
-Important design:
-  - Orthosim.py is the master wrapper.
-  - Orthosim.py requires a config for --Orthogroup-simulation.
-  - Orthosim.py may also receive extra CLI flags; those override the input config.
-  - Orthosim.py writes the final merged config to <output>/config.txt.
-  - This script reads that final merged config and runs the simulation.
+#   1. read_config()              
+#   2. configure_legacy_args()    
+#   3. create_subfolders()         
+#   5. og.RunOrthogroupMultiProc() 
+#   6. build the simulation output files 
 
-This script does not try to rediscover a generic input folder.
-It adapts the Orthosim.py config values into the legacy args expected by
-orthogroup_simulation_utils.py.
-"""
-
-import argparse
 import os
-import sys
 import time
 import multiprocessing as mp
 from pathlib import Path
+from types import SimpleNamespace
 
-import orthogroup_simulation_utils as og
-
+import scripts.OrthogroupSimulation.orthogroup_simulation_utils as og
 
 def read_config(config_path):
     """
-    Read key=value config file.
-
-    Blank lines and comment lines are ignored.
+    Read the Orthosim-generated output/config.txt
     """
     config = {}
-
     with open(config_path) as handle:
         for line_number, line in enumerate(handle, start=1):
             line = line.strip()
-
             if not line or line.startswith("#"):
                 continue
-
             if "=" not in line:
                 raise ValueError(
                     f"Bad config line {line_number} in {config_path}: {line}"
                 )
-
             key, value = line.split("=", 1)
             config[key.strip()] = value.strip()
-
     return config
-
 
 def require_config(config, key):
     """
-    Return a required config value or fail clearly.
+    Look for required things in config
     """
     value = config.get(key)
-
     if value is None or str(value).strip() == "":
         raise ValueError(f"Required value missing from Orthosim config: {key}")
-
     return value
 
 
 def resolve_path(path_value, project_root):
     """
-    Resolve paths from config.
-
-    Absolute paths are used as-is.
-    Relative paths are interpreted relative to the Orthosim.py project root.
+    Turn a paths from config.txt into absolute paths
     """
     path = Path(path_value)
-
     if path.is_absolute():
         return str(path)
-
     return str((Path(project_root) / path).resolve())
 
 
 def first_existing_file(candidates, description):
     """
-    Return first existing file from a list of candidate paths.
+    find the right PFAM file
     """
     for candidate in candidates:
         if candidate and os.path.isfile(candidate):
             return candidate
-
     tried = "\n".join(f"  {candidate}" for candidate in candidates if candidate)
     raise ValueError(f"Could not find {description}. Tried:\n{tried}")
 
-
 def infer_project_root(config):
     """
-    Orthosim.py writes SimPath=<directory containing Orthosim.py>.
-    That is treated as the project root.
-
-    Fallback is two directories above this script:
-      scripts/OrthogroupSimulation/../..
+    get orthosim.py project root
     """
     if config.get("SimPath"):
         return os.path.abspath(config["SimPath"])
-
     script_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(script_dir, "..", ".."))
 
 
 def write_runtime_parameter_file(config, output_dir, project_root, threads):
     """
-    orthogroup_simulation_utils.LoadParameters() expects a parameter file
-    containing key=value lines.
-
-    The Orthosim output config is already the final merged config, so we copy
-    it into a runtime parameter file and add derived internal defaults.
-
-    These derived values do not need to be user-facing config entries:
-      iqtree_path  = <project_root>/bin/iqtree3
-      sagephy_path = <project_root>/bin/sagephy-1.0.0.jar
+    write the runtime parameter file which LoadParameters reads
     """
     runtime_config = dict(config)
-
     runtime_config["threads"] = str(threads)
 
     runtime_config.setdefault(
         "iqtree_path",
         os.path.join(project_root, "bin", "iqtree3"),
     )
-
     runtime_config.setdefault(
         "sagephy_path",
         os.path.join(project_root, "bin", "sagephy-1.0.0.jar"),
     )
-
-    # The current utils use sigma_log_mean and sigma_log_sd.
-    # Keep compatibility with configs that only have max_sigma2.
     runtime_config.setdefault("sigma_log_mean", "0")
-
     if "sigma_log_sd" not in runtime_config:
         if "max_sigma2" in runtime_config:
             runtime_config["sigma_log_sd"] = runtime_config["max_sigma2"]
@@ -146,42 +101,41 @@ def write_runtime_parameter_file(config, output_dir, project_root, threads):
         output_dir,
         "orthogroup_simulation_parameters.txt",
     )
-
     with open(runtime_parameter_file, "w") as out:
         for key in sorted(runtime_config):
             out.write(f"{key}={runtime_config[key]}\n")
 
     return runtime_parameter_file
 
-
 def configure_legacy_args(args, config):
     """
-    Convert Orthosim.py config names into the args names expected by
-    orthogroup_simulation_utils.py.
-
-    The utils currently expect:
-      args.o
-      args.s
-      args.p
-      args.f
-      args.PFAM
-      args.d
-      args.gap_profile
+    translates the wrapper args into the things that this script needs (based on legacy setup)
+        args.o            -> absolute output directory
+        args.n            -> number of orthogroups to simulate (int)
+        args.s            -> path to the ultrametric species tree
+        args.gap_profile  -> path to the empirical gap-position profile
+        args.domain_species -> species used for PFAM domain lookups
+        args.p            -> runtime parameter file (see
+                              write_runtime_parameter_file above)
+        args.f            -> PFAM genome FASTA for domain_species
+        args.d            -> PFAM domain-model CSV for domain_species
+        args.PFAM         -> PFAM scan results .txt for domain_species
+        args.project_root -> OrthoSim.py project root
+        args.pfam_root    -> root of the PFAM/ data tree (project_root/PFAM
+                              unless config overrides it with pfam_dir)
     """
     project_root = infer_project_root(config)
 
+    # --- core simulation inputs -------------------------------------------
     args.o = os.path.abspath(args.output)
     args.n = int(require_config(config, "Orthogroups"))
-    #args.s = resolve_path(require_config(config, "ultrametric_tree"), project_root)
     args.s = require_config(config, "ultrametric_tree")
-    #args.gap_profile = resolve_path(require_config(config, "gap_file"), project_root)
     args.gap_profile = require_config(config, "gap_file")
-
-    # pfam_species allows domain species to differ from the species-tree label.
-    # If absent, use species.
+    # pfam_species allows the PFAM-domain species to differ from the
+    # species-tree label; here we just reuse `species` for both.
     domain_species = require_config(config, "species")
     args.domain_species = domain_species
-
+    # Writes orthogroup_simulation_parameters.txt and returns its path.
     args.p = write_runtime_parameter_file(
         config=config,
         output_dir=args.o,
@@ -189,38 +143,29 @@ def configure_legacy_args(args, config):
         threads=args.threads,
     )
 
+    # --- locate PFAM data for domain_species ------------------------------
     pfam_root = config.get("pfam_dir")
     if pfam_root:
         pfam_root = resolve_path(pfam_root, project_root)
     else:
         pfam_root = os.path.join(project_root, "PFAM")
 
-    # Your stated PFAM layout:
-    #   PFAM/pfam_genomes
-    #   PFAM/pfam_results/csv_files/species_models_fixed
-    #
-    # Optional explicit overrides are supported, but not required.
     genome_candidates = []
-
     if config.get("pfam_genome_file"):
         genome_candidates.append(resolve_path(config["pfam_genome_file"], project_root))
-
     genome_candidates.extend([
         os.path.join(pfam_root, "pfam_genomes", f"{domain_species}.fa"),
         os.path.join(pfam_root, "pfam_genomes", f"{domain_species}.fasta"),
         os.path.join(pfam_root, "pfam_genomes", f"{domain_species}.faa"),
     ])
-
     args.f = first_existing_file(
         genome_candidates,
         f"PFAM genome FASTA for species '{domain_species}'",
     )
 
     domain_csv_candidates = []
-
     if config.get("pfam_domain_csv"):
         domain_csv_candidates.append(resolve_path(config["pfam_domain_csv"], project_root))
-
     domain_csv_candidates.extend([
         os.path.join(
             pfam_root,
@@ -237,20 +182,14 @@ def configure_legacy_args(args, config):
             f"{domain_species}.csv",
         ),
     ])
-
     args.d = first_existing_file(
         domain_csv_candidates,
         f"PFAM domain-model CSV for species '{domain_species}'",
     )
 
-    # orthogroup_simulation_utils.ExtractPfamDomains() needs args.PFAM.
-    # This is the PFAM scan result text file.
-    # We support explicit config override plus common locations.
     pfam_scan_candidates = []
-
     if config.get("pfam_scan_file"):
         pfam_scan_candidates.append(resolve_path(config["pfam_scan_file"], project_root))
-
     pfam_scan_candidates.extend([
         os.path.join(pfam_root, "pfam_results", f"{domain_species}_pfam.txt"),
         os.path.join(pfam_root, "pfam_results", f"{domain_species}.pfam.txt"),
@@ -258,25 +197,16 @@ def configure_legacy_args(args, config):
         os.path.join(pfam_root, "pfam_results", "txt_files", f"{domain_species}_pfam.txt"),
         os.path.join(pfam_root, "pfamscan_results", f"{domain_species}_pfam.txt"),
     ])
-
     args.PFAM = first_existing_file(
         pfam_scan_candidates,
         f"PFAM scan results text file for species '{domain_species}'",
     )
-
     args.project_root = project_root
     args.pfam_root = pfam_root
-
     return args
 
-
 def create_subfolders(output_dir):
-    """
-    Orthosim.py creates the top-level output directory.
-    The simulation script creates only its own subdirectories.
-    """
     os.makedirs(output_dir, exist_ok=True)
-
     for folder in [
         "temporary_files",
         "proteome_files",
@@ -287,9 +217,6 @@ def create_subfolders(output_dir):
 
 
 def check_inputs_and_load_parameters(args):
-    """
-    Fail early before multiprocessing starts.
-    """
     required_files = {
         "Orthosim config": args.config,
         "species tree": args.s,
@@ -299,7 +226,6 @@ def check_inputs_and_load_parameters(args):
         "PFAM scan results": args.PFAM,
         "PFAM domain-model CSV": args.d,
     }
-
     for description, path in required_files.items():
         if not os.path.isfile(path):
             raise ValueError(f"{description} not found: {path}")
@@ -310,10 +236,8 @@ def check_inputs_and_load_parameters(args):
 
     if not os.path.isfile(str(og.sagephy_path)):
         raise ValueError(f"SagePhy jar not found: {og.sagephy_path}")
-
     if not os.path.isfile(str(og.iqtree_path)):
         raise ValueError(f"IQ-TREE executable not found: {og.iqtree_path}")
-
     if not os.access(str(og.iqtree_path), os.X_OK):
         raise ValueError(f"IQ-TREE exists but is not executable: {og.iqtree_path}")
 
@@ -337,13 +261,19 @@ def print_detected_inputs(args):
     print(f"  SagePhy:            {og.sagephy_path}")
 
 
-def main():
+def run_orthogroup_simulation(
+    complete_parameters,
+    output_abolsute_path,
+    threads,
+    current_file_path,
+    config_file_path,
+):
     print("---------------------------------------------------")
     print("Welcome to the Orthogroup Simulation\n")
 
+    ## greeting
     start_time = time.time()
     current_hour = time.localtime().tm_hour
-
     if 6 <= current_hour < 12:
         print("Good morning!")
     elif 12 <= current_hour < 18:
@@ -351,68 +281,50 @@ def main():
     else:
         print("Good evening!")
 
-    parser = argparse.ArgumentParser(
-        description=(
-            "Orthogroup simulation worker. "
-            "This script is called by Orthosim.py and reads the final "
-            "Orthosim-generated output/config.txt."
-        )
-    )
+    ## threads
+    threads = int(threads)
+    if threads < 1:
+        raise ValueError("threads must be >= 1")
 
-    parser.add_argument(
-        "--config",
-        required=True,
-        help="Path to the final Orthosim-generated config.txt",
-    )
+    ## config and pathing
+    config_file_path = os.path.abspath(config_file_path)
+    output_abolsute_path = os.path.abspath(output_abolsute_path)
 
-    parser.add_argument(
-        "--output",
-        required=True,
-        help="Output directory created by Orthosim.py",
-    )
+    if not os.path.isfile(config_file_path):
+        raise ValueError(f"Orthosim config not found: {config_file_path}")
 
-    parser.add_argument(
-        "--threads",
-        required=True,
-        type=int,
-        help="Thread/process count passed by Orthosim.py",
-    )
-
-    args = parser.parse_args()
-
-    args.config = os.path.abspath(args.config)
-    args.output = os.path.abspath(args.output)
-
-    if args.threads < 1:
-        raise ValueError("--threads must be >= 1")
-
-    if not os.path.isfile(args.config):
-        raise ValueError(f"Orthosim config not found: {args.config}")
-
-    if not os.path.isdir(args.output):
+    if not os.path.isdir(output_abolsute_path):
         raise ValueError(
-            f"Output directory not found: {args.output}\n"
-            "Orthosim.py should create this directory before this script is called."
+            f"Output directory not found: {output_abolsute_path}\n"
+            "Orthosim.py should create this directory before running the simulation."
         )
 
-    config = read_config(args.config)
+    config = read_config(config_file_path)
+
+    ##args
+    args = SimpleNamespace(
+        config=config_file_path,
+        output=output_abolsute_path,
+        threads=threads,
+    )
     args = configure_legacy_args(args, config)
 
     create_subfolders(args.o)
     check_inputs_and_load_parameters(args)
 
-    # Override legacy hardcoded THREADS = 64 in the utils module.
-    og.THREADS = args.threads
+    og.THREADS = threads
 
     print_detected_inputs(args)
+
+    ## multiprocesing
     mp.set_start_method("spawn", force=True)
- 
     og.RunOrthogroupMultiProc(
         n=args.n,
         outdir=args.o,
-        threads=args.threads,
+        threads=threads,
     )
 
+    # printing and saving output
     print("\n")
 
     og.CopyAlignments()
@@ -440,7 +352,3 @@ def main():
     print(f"Output written to: {args.o}")
     print(f"Elapsed time: {elapsed:.2f} seconds\n")
     print("Have a smashing day!\n")
-
-
-if __name__ == "__main__":
-    main()
