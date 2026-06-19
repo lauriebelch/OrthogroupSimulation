@@ -109,30 +109,26 @@ def write_runtime_parameter_file(config, output_dir, project_root, threads):
 
 def configure_legacy_args(args, config):
     """
-    translates the wrapper args into the things that this script needs (based on legacy setup)
-        args.o            -> absolute output directory
-        args.n            -> number of orthogroups to simulate (int)
-        args.s            -> path to the ultrametric species tree
-        args.gap_profile  -> path to the empirical gap-position profile
-        args.domain_species -> species used for PFAM domain lookups
-        args.p            -> runtime parameter file (see
-                              write_runtime_parameter_file above)
-        args.f            -> PFAM genome FASTA for domain_species
-        args.d            -> PFAM domain-model CSV for domain_species
-        args.PFAM         -> PFAM scan results .txt for domain_species
-        args.project_root -> OrthoSim.py project root
-        args.pfam_root    -> root of the PFAM/ data tree (project_root/PFAM
-                              unless config overrides it with pfam_dir)
+    translates the wrapper args into the things that this script needs
+        args.o = absolute output directory
+        args.n = number of orthogroups to simulate (int)
+        args.s = path to the ultrametric species tree
+        args.gap_profile = path to the empirical gap-position profile
+        args.domain_species = species used for PFAM domain lookups
+        args.p = runtime parameter file 
+        args.f = PFAM genome FASTA for domain_species
+        args.d = PFAM domain-model CSV for domain_species
+        args.PFAM = PFAM scan results .txt for domain_species
+        args.project_root = OrthoSim.py project root
+        args.pfam_root = root of the PFAM
     """
     project_root = infer_project_root(config)
 
-    # --- core simulation inputs -------------------------------------------
+    # core simulation inputs
     args.o = os.path.abspath(args.output)
     args.n = int(require_config(config, "Orthogroups"))
     args.s = require_config(config, "ultrametric_tree")
     args.gap_profile = require_config(config, "gap_file")
-    # pfam_species allows the PFAM-domain species to differ from the
-    # species-tree label; here we just reuse `species` for both.
     domain_species = require_config(config, "species")
     args.domain_species = domain_species
     # Writes orthogroup_simulation_parameters.txt and returns its path.
@@ -143,7 +139,7 @@ def configure_legacy_args(args, config):
         threads=args.threads,
     )
 
-    # --- locate PFAM data for domain_species ------------------------------
+    # locate PFAM data for domain_species
     pfam_root = config.get("pfam_dir")
     if pfam_root:
         pfam_root = resolve_path(pfam_root, project_root)
@@ -230,16 +226,17 @@ def check_inputs_and_load_parameters(args):
         if not os.path.isfile(path):
             raise ValueError(f"{description} not found: {path}")
 
-    # Load runtime parameters into orthogroup_simulation_utils globals.
-    og.args = args
-    og.LoadParameters(args.p)
+    # Load runtime parameters and merge onto args.
+    params = og.LoadParameters(args.p)
+    for key, value in params.items():
+        setattr(args, key, value)
 
-    if not os.path.isfile(str(og.sagephy_path)):
-        raise ValueError(f"SagePhy jar not found: {og.sagephy_path}")
-    if not os.path.isfile(str(og.iqtree_path)):
-        raise ValueError(f"IQ-TREE executable not found: {og.iqtree_path}")
-    if not os.access(str(og.iqtree_path), os.X_OK):
-        raise ValueError(f"IQ-TREE exists but is not executable: {og.iqtree_path}")
+    if not os.path.isfile(str(args.sagephy_path)):
+        raise ValueError(f"SagePhy jar not found: {args.sagephy_path}")
+    if not os.path.isfile(str(args.iqtree_path)):
+        raise ValueError(f"IQ-TREE executable not found: {args.iqtree_path}")
+    if not os.access(str(args.iqtree_path), os.X_OK):
+        raise ValueError(f"IQ-TREE exists but is not executable: {args.iqtree_path}")
 
 
 def print_detected_inputs(args):
@@ -257,8 +254,8 @@ def print_detected_inputs(args):
     print(f"  Genome FASTA:       {args.f}")
     print(f"  PFAM scan results:  {args.PFAM}")
     print(f"  Domain CSV:         {args.d}")
-    print(f"  IQ-TREE:            {og.iqtree_path}")
-    print(f"  SagePhy:            {og.sagephy_path}")
+    print(f"  IQ-TREE:            {args.iqtree_path}")
+    print(f"  SagePhy:            {args.sagephy_path}")
 
 
 def run_orthogroup_simulation(
@@ -312,8 +309,6 @@ def run_orthogroup_simulation(
     create_subfolders(args.o)
     check_inputs_and_load_parameters(args)
 
-    og.THREADS = threads
-
     print_detected_inputs(args)
 
     ## multiprocesing
@@ -322,30 +317,31 @@ def run_orthogroup_simulation(
         n=args.n,
         outdir=args.o,
         threads=threads,
+        args=args,
     )
 
     # printing and saving output
     print("\n")
 
-    og.CopyAlignments()
+    og.CopyAlignments(args)
     print("Written alignments\n")
 
-    og.CopyTrees()
+    og.CopyTrees(args)
     print("Written trees\n")
 
-    og.BuildProteomes()
+    og.BuildProteomes(args)
     print("Written proteomes\n")
 
-    og.ConcatOrthologs()
+    og.ConcatOrthologs(args)
     print("Written orthologs\n")
 
-    og.SaveOrthogroups()
+    og.SaveOrthogroups(args)
     print("Written orthogroups\n")
 
-    og.BuildOrthogroupStats()
+    og.BuildOrthogroupStats(args)
     print("Written orthogroup stats\n")
 
-    og.WriteRunLog()
+    og.WriteRunLog(args)
     print("Written log file\n")
 
     elapsed = time.time() - start_time

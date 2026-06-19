@@ -10,7 +10,6 @@ import contextlib
 import json
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -92,8 +91,8 @@ def args_dicts():
             "OG_num":["--Orthogroups","NUMBER_OF_ORTHOGROUPS"],            
             "tool":["--tool","OF3,FASTOMA,BROCOLI,SONICPARANOID2"],
             "Tool-output":["--tool-output","PATH_TO_TOOL_OUTPUT"],
-            "Tool-tree":["--tool-tree","PATH_TO_TOOL_TREE required for: Brocoli & SonicParanoid2"],
-            "Tool_input_Proteomes":["--tools-proteomes","PATH_TO_TOOLS_PROTEOMES required for: FastOMA, Brocoli, SonicParanoid2"],
+            "Tool-tree":["--tool-tree","PATH_TO_TOOL_TREE required for: BROCOLI, SONICPARANOID2 (these tools do not produce a species tree natively); optional override for FASTOMA"],
+            "Tool_input_Proteomes":["--tools-proteomes","PATH_TO_TOOLS_PROTEOMES required for: FASTOMA, BROCOLI, SONICPARANOID2"],
             #"GA_scores":["--parameter-folder","PATH_TO_PARAMETERS note: output of --Get-Parameters"],
             "Config":["--Config","PATH_TO_CONFIG FILE"],
             }
@@ -108,7 +107,7 @@ def requirements_dicts():
     requirement_dict = {
         "og_sim" : arg_parse_reformat([args["output"],args["Input_Tree"],args["Species"],args_shared["OG_num"]] + list(args_og_sim.values())),
         "GA" : arg_parse_reformat([args["output"],args_shared["OG_num"]] +list(args_GA.values())), 
-        "get_data" : arg_parse_reformat([args["output"],args_shared["tool"],args_shared["Tool-output"],args_shared["Tool-tree"],args_shared["Tool_input_Proteomes"]]),
+        "get_data" : arg_parse_reformat([args["output"],args_shared["tool"],args_shared["Tool-output"]]),
         "PFAM" : arg_parse_reformat([args["output"],args["Proteome"]])}
     return requirement_dict
                      
@@ -342,6 +341,20 @@ def run_orthogroup_simulation(
 ## to run the get parameters bit
 def run_get_parameters(complete_parameters, output_abolsute_path, threads, current_file_path):
     tool = complete_parameters["tool"].lstrip().rstrip().upper()
+
+    # Per-tool validation of optional flags not checked globally.
+    needs_proteomes = tool in ("FASTOMA", "BROCOLI", "SONICPARANOID2")
+    needs_tree      = tool in ("BROCOLI", "SONICPARANOID2")
+    missing = []
+    if needs_proteomes and not complete_parameters.get("tools_proteomes"):
+        missing.append("--tools-proteomes (required for %s)" % tool)
+    if needs_tree and not complete_parameters.get("tool_tree"):
+        missing.append("--tool-tree (required for %s — tool does not produce a species tree natively)" % tool)
+    if missing:
+        print("The following flags are missing for tool %s:" % tool)
+        for m in missing:
+            print("  " + m)
+        sys.exit(1)
     get_parameters_dir = os.path.join(
         current_file_path,
         "scripts",
@@ -364,25 +377,21 @@ def run_get_parameters(complete_parameters, output_abolsute_path, threads, curre
         print("ERROR: GetParameters wrapper not found for %s:" % tool)
         print(train_script)
         sys.exit(1)
-    cmd = [
-        sys.executable,
-        train_script,
-        "--output", output_abolsute_path,
-        "--tool-output", complete_parameters["tool_output"],
-        "--tools-proteomes", complete_parameters["tools_proteomes"],
-        "--tool-tree", complete_parameters["tool_tree"],
-        "--threads", str(threads),
-    ]
-    print("Running GetParameters command:")
-    print(" ".join(cmd))
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print("ERROR: GetParameters wrapper failed.")
-        print("Tool: %s" % tool)
-        print("Command:")
-        print(" ".join(cmd))
-        sys.exit(e.returncode)
+    print("Running GetParameters for tool: %s" % tool)
+    print("Train script: %s" % train_script)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        train_scripts[tool].replace(".py", ""), train_script
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.run(
+        complete_parameters["tool_output"],
+        output_abolsute_path,
+        threads,
+        tools_proteomes=complete_parameters.get("tools_proteomes"),
+        tool_tree=complete_parameters.get("tool_tree"),
+    )
 
 ## to run pfam
 def run_pfam(complete_parameters, output_abolsute_path, threads, current_file_path):
@@ -403,23 +412,17 @@ def run_pfam(complete_parameters, output_abolsute_path, threads, current_file_pa
         print("ERROR: PFAM wrapper not found:")
         print(pfam_wrapper)
         sys.exit(1)
-    cmd = [
-        sys.executable,
-        pfam_wrapper,
-        "--proteome", complete_parameters["Proteome"],
-        "--threads", str(threads),
-        "--pfam-dir", pfam_results_dir,
-        "--orthosim-output", output_abolsute_path,
-    ]
-    print("Running PFAM command:")
-    print(" ".join(cmd))
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print("ERROR: PFAM wrapper failed.")
-        print("Command:")
-        print(" ".join(cmd))
-        sys.exit(e.returncode)
+    print("Running PFAM workflow via: %s" % pfam_wrapper)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("pfam_wrapper", pfam_wrapper)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.run(
+        complete_parameters["Proteome"],
+        threads,
+        pfam_results_dir,
+        output_abolsute_path,
+    )
         
         
 def run_GA(complete_parameters, output_abolsute_path, threads, current_file_path):

@@ -10,15 +10,17 @@ from ete3 import Tree
 import shutil
 
 
-def main(sonic_output, sonic_input, output_base, n_threads):
+def main(sonic_output, sonic_input, output_base, n_threads, tool_tree):
     """
     Create numeric orthogroup sequence files and a matching numeric species tree
     from SonicParanoid2 output.
 
+    tool_tree: path to the user-supplied species tree (required — SonicParanoid2
+               does not produce a species tree natively).
+
     Expected input structure:
 
         sonic_output/
-            species_tree.nwk
             runs/
                 <run_name>/
                     ortholog_groups/
@@ -66,10 +68,7 @@ def main(sonic_output, sonic_input, output_base, n_threads):
 
     groups_file = find_sonicparanoid_groups_file(sonic_out)
 
-    species_tree_src = os.path.join(
-        sonic_out,
-        "species_tree.nwk",
-    )
+    species_tree_src = os.path.abspath(tool_tree)
 
     seq_dir = os.path.join(
         output_base,

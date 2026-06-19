@@ -3,11 +3,10 @@
 """
 Created on Wed Aug 13 08:59:11 2025
 
-@author: user
+@author: LB & JH
 """
 
 from __future__ import annotations
-import argparse
 import os
 import sys
 import ete3
@@ -31,31 +30,31 @@ import statistics
 THREADS = 8
 
 ## multiprocessing housekeeping ##
-# placeholder for share queue
+# placeholder for shared queue
 SEQ_Q = None
 # cache to map orthogroup to key and seq (so that failed attempts can retry)
 SEED_CACHE: Dict[int, Tuple[str, str]] = {}
-# placeholder for workers to access args
-args = None
 
-## Initializer for each worker process: set shared queue and args
-def _init_worker(seq_q, cli_args):
-    global SEQ_Q, SEED_CACHE, args
+## Initializer for each worker process
+## args is passed  via pool.starmap
+def _init_worker(seq_q):
+    global SEQ_Q, SEED_CACHE
     SEQ_Q = seq_q
     SEED_CACHE = {}
-    args = cli_args
-    LoadParameters(args.p)
+######################################
 
-
-### define other required variables
+### define other required variables for simulations
 tag = "XTAGX"
 
-# ============================================================
-# Parameter and input helpers
-# ============================================================
+########################
+### Parameter and input helpers
+########################
 
 ## load parameters from parameter file
+## Returns a plain dict of key - value.
+# every parameter (iqtree_path, sagephy_path, gbc etc) lives on args, rather than global
 def LoadParameters(file_path):
+    params = {}
     with open(file_path) as f:
         for line in f:
             line = line.strip()
@@ -68,35 +67,35 @@ def LoadParameters(file_path):
                 else:
                     value = int(value)
             except ValueError:
-                # Boolean-like strings
                 if value.lower() in ("true", "yes", "on"):
                     value = True
                 elif value.lower() in ("false", "no", "off"):
                     value = False
                 else:
                     value = value  # keep as string
-            globals()[key] = value  # assign as variable
+            params[key] = value
+    return params
 
 ## needed if we are going to do shuffling
-def FindRootNode():
+def FindRootNode(args):
     species_tree_file = str(args.s)
     t1 = ete3.Tree(species_tree_file)
     val = (2*len(t1)-2)
     return val
 
-def FindNSpecies():
+def FindNSpecies(args):
     species_tree_file = str(args.s)
     t1 = ete3.Tree(species_tree_file)
     return len(t1)
 
-# ============================================================
+##################################################
 # Gene tree simulation and branch handling
-# ============================================================
+##################################################
 
 ## check if tree is at root of species tree
 ## if not, we need to shuffle
-def CheckForRoot(outname):
-    NS = FindNSpecies()
+def CheckForRoot(outname, args):
+    NS = FindNSpecies(args)
     tree_file = os.path.join(str(args.o), 'temporary_files', f"{outname}.unpruned.tree")
     with open(tree_file, "r") as f:
         tree_str = f.read()
@@ -112,22 +111,22 @@ def CheckForRoot(outname):
     return 0
 
 # simulate a gene tree using sagephy
-def SimulateGeneTree(outname):
+def SimulateGeneTree(outname, args):
     # outname is the orthogroup name (e.g. 11)
     # use random to choose values for parameters where user inputs max
-    dupes = random.random() * max_duplication_rate
-    loss = random.random() * max_loss_rate
-    trans_rate = random.random() * max_transfer_rate
+    dupes = random.random() * args.max_duplication_rate
+    loss = random.random() * args.max_loss_rate
+    trans_rate = random.random() * args.max_transfer_rate
     # define output path
     output1 = os.path.join(str(args.o), 'temporary_files', str(outname))
     # command to be run
     cmd = [
-    "java", "-jar", str(sagephy_path), "GuestTreeGen",
+    "java", "-jar", str(args.sagephy_path), "GuestTreeGen",
     "-a", "200",
-    "-gb", "-gbc", str(gbc),
+    "-gb", "-gbc", str(args.gbc),
     "-vp", str(tag),
-    "-p", str(leaf_sampling_probability),
-    "-rt", str(replacement_prob),
+    "-p", str(args.leaf_sampling_probability),
+    "-rt", str(args.replacement_prob),
     str(args.s), str(dupes), str(loss), str(trans_rate), str(output1)]
     #print(" ".join(cmd))
     subprocess.run(cmd, check=True, timeout=60)
@@ -141,7 +140,7 @@ def SimulateGeneTree(outname):
         #f.write(f"indel_size={indel_size}\n")
 
 # relax branch lengths using sagephy
-def RelaxBranchLengths(outname):
+def RelaxBranchLengths(outname, args):
     # names need to be species_X_Y
     # where X = orthogroup ID (outname)
     # where Y = ID within that species
@@ -152,16 +151,16 @@ def RelaxBranchLengths(outname):
     start = random.random() * max_start_rate
     sigma = random.random() * max_sigma2
     '''
-    start = max_start_rate
-    sigma = np.random.lognormal(mean=sigma_log_mean, sigma=sigma_log_sd) ** 2
+    start = args.max_start_rate
+    sigma = np.random.lognormal(mean=args.sigma_log_mean, sigma=args.sigma_log_sd) ** 2
     # define input path - pruned tree from sagephy
     input2 = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned.tree")
     # define output path - relaxed pruned tree
     output2 = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned_relaxed.tree")
     # command to be run
     cmd = [
-    "java", "-jar", str(sagephy_path), "BranchRelaxer",
-    input2, str(relax_model), str(start), str(sigma), "--keep-interior-names",
+    "java", "-jar", str(args.sagephy_path), "BranchRelaxer",
+    input2, str(args.relax_model), str(start), str(sigma), "--keep-interior-names",
     "-o", output2]
     subprocess.run(cmd, check=True, timeout=60)
     # add to logfile for this orthogroup
@@ -170,7 +169,7 @@ def RelaxBranchLengths(outname):
         f.write(f"branch_relax_startrate={start}\n")
         f.write(f"branch_relax_sigma={sigma}\n")
 
-def RelabelRelaxedTree(outname):
+def RelabelRelaxedTree(outname, args):
     # use leafmap to relabel
     filename = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned.leafmap")
     # we will relabel the relaxed tree
@@ -225,12 +224,12 @@ def RelabelRelaxedTree(outname):
         for old_name, new_name in mappings:
             f.write(f"{old_name}\t{new_name}\n")
 
-# ============================================================
+##################################################
 # Sequence selection and PFAM/domain partitioning
-# ============================================================
+##################################################
 
 # load starting fasta
-def MakeFastaDict():
+def MakeFastaDict(args):
     # initialize empty dict
     fasta_dict = {}
     # filepath
@@ -259,10 +258,10 @@ def ShuffleSequence(seq, k):
     return "".join(kmers)
 
 # select a sequence
-def SelectSequence(outname: int):
-    ## pull one key,seq from the share queue
+def SelectSequence(outname, args):
+    ## pull one key,seq from the shared queue
     ## on retries (e.g. for alignment too gappy), reuse cached seed
-    global SEQ_Q, SEED_CACHE, args
+    global SEQ_Q, SEED_CACHE
     if outname in SEED_CACHE:
         key, seq = SEED_CACHE[outname]
     else:
@@ -270,7 +269,7 @@ def SelectSequence(outname: int):
         SEED_CACHE[outname] = (key, seq)
     # perform shuffling
     # do shuffling if root node doesnt appear in tree
-    a = CheckForRoot(outname)
+    a = CheckForRoot(outname, args)
     shuffled_sequence = "FALSE"
     def random_char(y):
        return ''.join(random.choice(string.ascii_letters) for x in range(y))
@@ -295,9 +294,7 @@ def SelectSequence(outname: int):
     return key, seq
 
 # function to extract pfam domains from pfam run
-# example code to run this: pfam_scan.pl -fasta inputs/Saccharomyces_cerevisiae.fasta -dir pfam_db/ -outfile fungi.pfam.txt -cpu 64
-# note that we currently hardcode path to pfam_scan results file
-def ExtractPfamDomains(outname):
+def ExtractPfamDomains(outname, args):
     pfam_file = args.PFAM
     log_path = os.path.join(str(args.o), 'temporary_files', f"{outname}.txt")
     with open(log_path) as fh:
@@ -335,7 +332,7 @@ def ExtractPfamDomains(outname):
         results = merged
     return results
 
-def SelectRandomDomainModel():
+def SelectRandomDomainModel(args):
     csv_file = str(args.d)
     values = []
     with open(csv_file, newline="") as f:
@@ -347,17 +344,17 @@ def SelectRandomDomainModel():
 
 
 # make partition file from PFAM
-def MakePartitionPFAM(outname):
+def MakePartitionPFAM(outname, args):
    logfile = os.path.join(str(args.o), 'temporary_files', f"{outname}.txt")
    out_path = os.path.join(str(args.o), 'temporary_files', str(outname)+".partionfile.txt")
    root_seq_path = os.path.join(str(args.o), 'temporary_files', f"{outname}.root.seq")
    region_info_path = os.path.join(str(args.o),"temporary_files",str(outname) + ".partition_regions.tsv")
    # set variables
-   gamma_shape = random.lognormvariate(mu=gamma_shape_mean, sigma=gamma_shape_sd)
-   prop_invar = random.lognormvariate(mu=prop_invar_mean, sigma=prop_invar_sd)
+   gamma_shape = random.lognormvariate(mu=args.gamma_shape_mean, sigma=args.gamma_shape_sd)
+   prop_invar = random.lognormvariate(mu=args.prop_invar_mean, sigma=args.prop_invar_sd)
    prop_invar = max(0, min(0.99, prop_invar))
    model = f"JTT+G4{{{gamma_shape}}}+I{{{prop_invar}}}"
-   model2 = SelectRandomDomainModel()
+   model2 = SelectRandomDomainModel(args)
    if model2.startswith("JTT"):
         model2 = model2.replace("JTT", "JTT+C20", 1)
    if model2.startswith("LG"):
@@ -371,7 +368,7 @@ def MakePartitionPFAM(outname):
            seq_chunks.append(line.strip())
    L = len("".join(seq_chunks))
    #
-   domain_hits = ExtractPfamDomains(outname)
+   domain_hits = ExtractPfamDomains(outname, args)
    domain_intervals = [(max(1, h["start"]), min(L, h["end"])) for h in domain_hits if 1 <= h["start"] <= L]
    # Build regions covering the sections, and add FAST gaps and SLOW domains in order.
    regions = []
@@ -424,15 +421,15 @@ def MakePartitionPFAM(outname):
        for name, region_type, s, e, _, _ in regions_named:
            out.write(f"{name}\t{region_type}\t{s}\t{e}\n")
 
-# ============================================================
+##################################################
 # Alignment simulation and quality checks
-# ============================================================
+##################################################
 
 # simulate an alignment using edge-proportional partitioning
-def SimulateAlignmentPartition(outname):
+def SimulateAlignmentPartition(outname, args):
     # outname is the orthogroup name (e.g. 11)
-    indel_insert = random.random() * max_indel_insert
-    indel_delete = random.random() * max_indel_delete
+    indel_insert = random.random() * args.max_indel_insert
+    indel_delete = random.random() * args.max_indel_delete
     tree_outfile = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned_relaxed_relabelled.tree")
     root_seq_path = os.path.join(str(args.o), 'temporary_files', f"{outname}.root.seq")
     partition_path = os.path.join(str(args.o), 'temporary_files', str(outname)+".partionfile.txt")
@@ -441,7 +438,7 @@ def SimulateAlignmentPartition(outname):
     output1 = os.path.join(str(args.o), 'temporary_files', str(outname) + ".alignment")
     # command to be run
     cmd = [
-    str(iqtree_path), "--quiet", "--alisim", str(output1),
+    str(args.iqtree_path), "--quiet", "--alisim", str(output1),
     "--indel", f"{indel_insert},{indel_delete}",
     "--indel-size", f"{indel_size}",
     "-p", str(partition_path),
@@ -479,7 +476,7 @@ def SimulateAlignmentPartition(outname):
     return None    
 
 ## function that checks alignment (seqs that are gaps)
-def CheckAlignmentHealth(outname):
+def CheckAlignmentHealth(outname, args):
     alignment_path = os.path.join(str(args.o), 'temporary_files', str(outname) + ".alignment.fa")
     if not os.path.isfile(alignment_path):
         return False
@@ -502,7 +499,7 @@ def CheckAlignmentHealth(outname):
     return False
 
 ## function that reads number of duplications and losses
-def CountDuplicationLossTransfer(outname):
+def CountDuplicationLossTransfer(outname, args):
     # duplication and transfer has to be read from pruned (that the tree we see)
     # losses has to be read from unpruned (as by definition they are removed from pruned)
     input_file = os.path.join(str(args.o), 'temporary_files', str(outname) + ".pruned.info")
@@ -529,38 +526,24 @@ def CountDuplicationLossTransfer(outname):
         f.write(f"num_replacing_transfers={num_replace_transfers}\n")
         f.write(f"total_transfers={total_transfers}\n")
 
-# ============================================================
+##################################################
 # Gap shuffling
-# ============================================================
+##################################################
 
 def ReadGapPositionProfile(profile_file):
     """
     Read gap_position_profile_counts.tsv.
-
-    The filename is the same as before, but the format is now:
-
-        alignment    total_gaps    bin_1    bin_2    ...    bin_100
-
-    Each row is one empirical alignment profile.
-
     This function randomly selects one empirical profile row, then returns
     its bins sorted from least gap-enriched to most gap-enriched.
-
-    Returns:
-        rows:
-            list of (percent_bin, probability)
-
-        where percent_bin is 0-based, from 0 to 99.
     """
     profiles = []
-
     with open(profile_file) as f:
         header = next(f).strip().split("\t")
 
         if "total_gaps" not in header:
             raise ValueError(
                 f"Expected a 'total_gaps' column in {profile_file}. "
-                "This function expects the new local gap-profile format."
+                "This function a total gaps col"
             )
 
         total_gaps_idx = header.index("total_gaps")
@@ -695,13 +678,7 @@ def GetColumnGapFractions(seqs):
 def GetGapColumnBlocks(seqs):
     """
     Identify contiguous blocks of alignment columns where at least one
-    sequence has a gap.
-
-    These blocks are treated as approximate shared indel events.
-
-    Returns:
-        blocks = list of (start, end) 0-based inclusive coordinates
-        gap_fractions = per-column gap fractions
+    sequence has a gap. These blocks are treated as approximate shared indel events.
     """
     gap_fractions = GetColumnGapFractions(seqs)
 
@@ -724,7 +701,7 @@ def GetGapColumnBlocks(seqs):
     return blocks, gap_fractions
 
 
-def GapShuffleAlignment(outname):
+def GapShuffleAlignment(outname, args):
     """
     Shuffle gap-containing column blocks across the whole alignment.
     Logic:
@@ -892,9 +869,9 @@ def GapShuffleAlignment(outname):
         f.write(f"non_gap_columns={len(non_gap_cols)}\n")
         f.write(f"alignment_length={aln_len}\n")
 
-# ============================================================
+##################################################
 # Ortholog inference and parsing
-# ============================================================
+##################################################
 
 ### Orthologs
 ## we do this in three parts
@@ -902,7 +879,7 @@ def GapShuffleAlignment(outname):
 ## then we do our main Ortholog function to call orthologs and save as pairs ###
 ## then we OrthologParsing to add species names and format the file for that og###
 
-def PrepareForOrthologs(outname):
+def PrepareForOrthologs(outname, args):
     # prepare tree
     tree_file = os.path.join(str(args.o), "temporary_files", f"{outname}.pruned.tree")
     with open(tree_file, "r") as f:
@@ -926,10 +903,10 @@ def PrepareForOrthologs(outname):
     return tree, spec_nodes, name_index
 
 ## function that extracts orthologs
-def Orthologs(outname):
+def Orthologs(outname, args):
 ## to allow multiprocessing, save one file per OG
     ## load the tree and node dict from PrepareForOrthologs
-    tree, spec_nodes, name_index = PrepareForOrthologs(outname)
+    tree, spec_nodes, name_index = PrepareForOrthologs(outname, args)
     out_path = os.path.join(str(args.o), "temporary_files", f"{outname}.orthologpairs.txt")
     # we now have a tree, and a dict of speciation nodes
     # orthologs are pairs of genes seperated by a speciation node
@@ -976,7 +953,7 @@ def SpeciesFromGene(gene):
         return parts[0]
 
 ## function that extract species names and relabelled gene names of orthologs
-def OrthologParsing(outname):
+def OrthologParsing(outname, args):
 ## we want headers of Orthogroup	Species_1	Species_2	Gene_1	Gene_2
 ## relabel map helps us relabel the genes
 ## orthlogpairs has the orthologs
@@ -1014,26 +991,24 @@ def OrthologParsing(outname):
             out.write(f"{outname}\t{s1}\t{s2}\t{g1_new}\t{g2_new}\n")
 
 
-# ============================================================
+##################################################
 # One-orthogroup and multiprocessing pipeline
-# ============================================================
+##################################################
 
 # below is the old RunOrthogroup that didnt use multiproc
 ## main function to simulate an orthogroup
-def RunOrthogroup(outname):
-    #LoadParameters
-    SimulateGeneTree(outname)
-    RelaxBranchLengths(outname)
-    RelabelRelaxedTree(outname)
-    SelectSequence(outname)
-    MakePartitionPFAM(outname)
-    alisim_result = SimulateAlignmentPartition(outname)
+def RunOrthogroup(outname, args):
+    SimulateGeneTree(outname, args)
+    RelaxBranchLengths(outname, args)
+    RelabelRelaxedTree(outname, args)
+    SelectSequence(outname, args)
+    MakePartitionPFAM(outname, args)
+    alisim_result = SimulateAlignmentPartition(outname, args)
     if alisim_result is None:
         print(f"[{outname}] AliSim failed. Skipping this orthogroup.")
         return
-    #SimulateAlignmentPartition(outname) # uses partition file
-    GapShuffleAlignment(outname)
-    unhealthy = CheckAlignmentHealth(outname)
+    GapShuffleAlignment(outname, args)
+    unhealthy = CheckAlignmentHealth(outname, args)
     ## if check alignment health = true, we need to start again
     ## for that og. remove files with the outname. prefix, and print a message
     if unhealthy:
@@ -1042,21 +1017,21 @@ def RunOrthogroup(outname):
         temp_file = base_outdir / "temporary_files" / f"{outname}.txt"
         if temp_file.exists():
             temp_file.unlink()
-        return RunOrthogroup(outname)
+        return RunOrthogroup(outname, args)
 
     if not unhealthy:
-        CountDuplicationLossTransfer(outname)
-        Orthologs(outname)
-        OrthologParsing(outname)
+        CountDuplicationLossTransfer(outname, args)
+        Orthologs(outname, args)
+        OrthologParsing(outname, args)
     print("done an orthogroup")
 
-def RunOrthogroupMultiProc(n, outdir, threads=12):
+def RunOrthogroupMultiProc(n, outdir, threads, args):
     # Build starting genome once
     # sample N unique starting genes
     # make a shared queue
     # run the RunOrthogroup function
     # Build once and sample without replacement
-    fasta_dict = MakeFastaDict()  # {gene_id: sequence}
+    fasta_dict = MakeFastaDict(args)  # {gene_id: sequence}
     if n > len(fasta_dict):
         raise ValueError(f"Need {n} sequences but only have {len(fasta_dict)}")
     samples = random.sample(list(fasta_dict.items()), n)  # [(key, seq), ...]
@@ -1070,18 +1045,18 @@ def RunOrthogroupMultiProc(n, outdir, threads=12):
 
     # Fan out: each worker pulls exactly one seed (cached on retry)
     nproc = threads
-    with ctx.Pool(processes=nproc, initializer=_init_worker, initargs=(seq_q, args)) as pool:
-        pool.map(RunOrthogroup, range(n))
+    with ctx.Pool(processes=nproc, initializer=_init_worker, initargs=(seq_q,)) as pool:
+        pool.starmap(RunOrthogroup, [(i, args) for i in range(n)])
 
 
-# ============================================================
+##################################################
 # Final output collation
-# ============================================================
+##################################################
 
 ### function that makes global ortholog output from individual orthogroup file
 ##output file is Simulated_orthologs.txt
 ## headers are Orthogroup	Species_1	Species_2	Gene_1	Gene_2
-def ConcatOrthologs():
+def ConcatOrthologs(args):
     outdir = args.o
     ## find all ortholog files
     files = sorted(glob.glob(os.path.join(outdir, "temporary_files", "*orthologs.txt"), recursive=True))
@@ -1103,7 +1078,7 @@ def ConcatOrthologs():
 
 ## function that saves alignments
 
-def CopyAlignments():
+def CopyAlignments(args):
     outdir = args.o
     files = glob.glob(os.path.join(outdir, "temporary_files", "*alignment.fa"), recursive=True)
     dest = os.path.join(outdir, "alignment_files")
@@ -1111,7 +1086,7 @@ def CopyAlignments():
         shutil.copy2(src, dest)
 
 ## function that saves trees
-def CopyTrees():
+def CopyTrees(args):
     outdir = args.o
     suffix = ".pruned_relaxed_relabelled.tree"
     files = glob.glob(os.path.join(outdir, "temporary_files", f"*{suffix}"))
@@ -1122,7 +1097,7 @@ def CopyTrees():
         shutil.copy2(src, os.path.join(dest, f"{outname}.tre"))
 
 ## function that saves proteomes
-def BuildProteomes():
+def BuildProteomes(args):
     outdir = args.o
     infiles = glob.glob(os.path.join(outdir, "temporary_files", "*alignment.fa"))
     dest = os.path.join(outdir, "proteome_files")
@@ -1162,7 +1137,7 @@ def BuildProteomes():
 
 
 ## function that saves orthogroups
-def SaveOrthogroups():
+def SaveOrthogroups(args):
     outdir = args.o
     infiles = sorted(glob.glob(os.path.join(outdir, "alignment_files", "*.fa")))
     ## need to dictionary to store which species each gene in an OG belongs to
@@ -1193,7 +1168,7 @@ def SaveOrthogroups():
             w.write(og + "\t" + "\t".join(cells) + "\n")
 
 ## function that collates stats from logfile to txt file / csv
-def BuildOrthogroupStats():
+def BuildOrthogroupStats(args):
     outdir = args.o
     #logs = sorted(glob.glob(os.path.join(outdir, "temporary_files", "*.txt")))
     # I should have named the logfile for each og something else
@@ -1259,7 +1234,7 @@ def BuildOrthogroupStats():
             w.write("\t".join(data.get(col, "") for col in VAR_ORDER) + "\n")
 
 ## function that writes run_log
-def WriteRunLog():
+def WriteRunLog(args):
     outdir = args.o
     log_path = os.path.join(outdir, "Run_log.txt")
     # Collect user input flags

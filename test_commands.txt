@@ -17,7 +17,7 @@ python OrthoSim.py \
 python OrthoSim.py \
   --Orthogroup-simulation \
   --output ../OrthoTrain_analysis/test_orthosim_run \
-  --Config ExampleData/example_simulation_config.txt --threads 32
+  --Config ExampleData/example_simulation_config.txt --threads 8
 
 ## rm -rf ../OrthoTrain_analysis/test_orthosim_run
 

@@ -236,6 +236,11 @@ def run_fastoma_train(
     print("---OrthoTrain: Kelly Lab (2026), bioRxiv ")
 
 
+def run(tool_output, output_folder_path, n_threads, tools_proteomes=None, tool_tree=None):
+    """Uniform entry point used by OrthoSim.py's importlib-based dispatch."""
+    run_fastoma_train(tool_output, tools_proteomes, output_folder_path, n_threads, tool_tree=tool_tree)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="FastOMATrain.py",

@@ -172,15 +172,29 @@ def fix_species_model_csv(model_csv, pfamscan_file, out_csv):
     return len(fixed_rows)
 
 
-def main():
-    args = parse_args()
-    pfamscan_dir = Path(args.pfam_scan_folder).expanduser().resolve()
-    species_models_dir = Path(args.species_models_dir).expanduser().resolve()
-    fixed_out_dir = Path(args.fixed_out_dir).expanduser().resolve()
+def run(pfam_scan_folder, species_models_dir, fixed_out_dir, species=None):
+    """
+    Direct callable entry point (used by pfam_wrapper.py without subprocess).
+
+    Parameters
+    ----------
+    pfam_scan_folder : str or Path
+        Folder containing pfam_scan.pl .txt output files.
+    species_models_dir : str or Path
+        Folder containing *_pfam_models.csv files from PfamModelExtractor.py.
+    fixed_out_dir : str or Path
+        Output folder for gene/file-level PFAM model CSVs.
+    species : str or None
+        Optional comma-separated species names. Auto-detected from scan folder
+        when None.
+    """
+    pfamscan_dir       = Path(pfam_scan_folder).expanduser().resolve()
+    species_models_dir = Path(species_models_dir).expanduser().resolve()
+    fixed_out_dir      = Path(fixed_out_dir).expanduser().resolve()
 
     fixed_out_dir.mkdir(parents=True, exist_ok=True)
 
-    current_species = parse_species_list(args.species, pfamscan_dir)
+    current_species = parse_species_list(species, pfamscan_dir)
 
     print(f"Species model folder: {species_models_dir}")
     print(f"PFAM scan folder:     {pfamscan_dir}")
@@ -192,17 +206,17 @@ def main():
         print("Done.")
         return
 
-    for species in current_species:
-        model_csv = species_models_dir / f"{species}_pfam_models.csv"
-        pfamscan_file = pfamscan_file_for_species(species, pfamscan_dir)
-        out_csv = fixed_out_dir / f"{species}_pfam_models.csv"
+    for sp in current_species:
+        model_csv     = species_models_dir / f"{sp}_pfam_models.csv"
+        pfamscan_file = pfamscan_file_for_species(sp, pfamscan_dir)
+        out_csv       = fixed_out_dir / f"{sp}_pfam_models.csv"
 
         if not pfamscan_file.is_file():
-            print(f"WARNING: no current-run PFAM scan file for {species}: {pfamscan_file}")
+            print(f"WARNING: no current-run PFAM scan file for {sp}: {pfamscan_file}")
             continue
 
         if not model_csv.is_file():
-            print(f"WARNING: no species model CSV for {species}: {model_csv}")
+            print(f"WARNING: no species model CSV for {sp}: {model_csv}")
             continue
 
         n_rows = fix_species_model_csv(
@@ -210,9 +224,19 @@ def main():
             pfamscan_file=pfamscan_file,
             out_csv=out_csv,
         )
-        print(f"{species}: wrote {n_rows} rows")
+        print(f"{sp}: wrote {n_rows} rows")
 
     print("Done.")
+
+
+def main():
+    args = parse_args()
+    run(
+        pfam_scan_folder=args.pfam_scan_folder,
+        species_models_dir=args.species_models_dir,
+        fixed_out_dir=args.fixed_out_dir,
+        species=args.species,
+    )
 
 
 if __name__ == "__main__":

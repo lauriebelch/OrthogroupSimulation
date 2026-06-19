@@ -9,15 +9,17 @@ from ete3 import Tree
 import shutil
 
 
-def main(broccoli_output, broccoli_input, output_base, n_threads):
+def main(broccoli_output, broccoli_input, output_base, n_threads, tool_tree):
     """
     Create numeric orthogroup sequence files and a matching numeric species tree
     from Broccoli output.
 
+    tool_tree: path to the user-supplied species tree (required — Broccoli does
+               not produce a species tree natively).
+
     Expected input structure:
 
         broccoli_output/
-            species_tree.nwk
             dir_step3/
                 table_OGs_protein_names.txt
 
@@ -72,10 +74,7 @@ def main(broccoli_output, broccoli_input, output_base, n_threads):
         "table_OGs_protein_names.txt",
     )
 
-    species_tree_src = os.path.join(
-        broccoli_out,
-        "species_tree.nwk",
-    )
+    species_tree_src = os.path.abspath(tool_tree)
 
     seq_dir = os.path.join(
         output_base,
