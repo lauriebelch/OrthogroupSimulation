@@ -196,13 +196,13 @@ def main(dup_rate,loss_rate,gbc_val,complete_parameters,current_file_path,defaul
     Copy_PFAM_Path = os.path.join(run_dir,"PFAM")	
 
     ## need better way...
-    shutil.copytree(PFAM_Path,
-                Copy_PFAM_Path)
+    #shutil.copytree(PFAM_Path,
+    #            Copy_PFAM_Path)
 
 
     # --- modify parameter file INSIDE copied folder ---
-    param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
-    modify_param_file(complete_parameters,param_file,current_file_path,default_species_pick,run_dir, dup_rate, loss_rate, gbc_val)
+    #param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
+    #modify_param_file(complete_parameters,param_file,current_file_path,default_species_pick,run_dir, dup_rate, loss_rate, gbc_val)
 
 
     # --- paths to scripts ---
