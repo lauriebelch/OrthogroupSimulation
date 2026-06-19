@@ -3,11 +3,11 @@
 
 # simulate_orthogroup_main.py
 
-#   1. read_config()              
-#   2. configure_legacy_args()    
-#   3. create_subfolders()         
-#   5. og.RunOrthogroupMultiProc() 
-#   6. build the simulation output files 
+#   1. read_config()
+#   2. configure_legacy_args()
+#   3. create_subfolders()
+#   5. og.RunOrthogroupMultiProc()
+#   6. build the simulation output files
 
 import os
 import time
@@ -69,8 +69,6 @@ def infer_project_root(config):
     """
     get orthosim.py project root
     """
-    if config.get("SimPath"):
-        return os.path.abspath(config["SimPath"])
     script_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(script_dir, "..", ".."))
 
@@ -115,7 +113,7 @@ def configure_legacy_args(args, config):
         args.s = path to the ultrametric species tree
         args.gap_profile = path to the empirical gap-position profile
         args.domain_species = species used for PFAM domain lookups
-        args.p = runtime parameter file 
+        args.p = runtime parameter file
         args.f = PFAM genome FASTA for domain_species
         args.d = PFAM domain-model CSV for domain_species
         args.PFAM = PFAM scan results .txt for domain_species

@@ -1,169 +1,84 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Mar  3 13:12:42 2026
-
-@author: Biol0216
-
-
- KL DIvergence of distributions....
- 
- ## get X Y data  (likely just X) 
- Bin into N bins - compare bins/KL divergence..
- #
- 
- Freedman–Diaconis rule for no. of bins
- KL for distribution of bins
- """
 
 import numpy
-import sys
-import scipy
-import math
-import pandas
-import matplotlib.pyplot as plt
-import seaborn as sns
-
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import argparse
 from scipy.stats import entropy
 
-##### inputs a numpy array/list for distribution 1 and distribution 2 as input - cna be different lengths
-##### output a kl divergence 
-# So divergence([1,2,3,4],[1,2,3,4,5])
-def divergence(dst1,dst2):
+# --- ARGPARSE ---
+
+
+
+
+
+def divergence(dst1, dst2):
     if type(dst1) == list:
         dst1 = numpy.array(dst1)
     if type(dst2) == list:
-        dst2 = numpy.array(dst2)        
-    cmbdst =  numpy.concatenate((dst1,dst2))
+        dst2 = numpy.array(dst2)
+
+    cmbdst = numpy.concatenate((dst1, dst2))
     Bins = numpy.histogram_bin_edges(cmbdst, bins='fd')
+
     dist1counts = []
-    dist2counts = []    
-    for b1,b2 in zip(Bins,Bins[1:]):
-        mask1dist1 =  numpy.abs(dst1) <= b2
+    dist2counts = []
+
+    for b1, b2 in zip(Bins, Bins[1:]):
+        mask1dist1 = numpy.abs(dst1) <= b2
         dst1_ = dst1[mask1dist1]
-        mask2dist1 = b1 <= numpy.abs(dst1_) 
+        mask2dist1 = b1 <= numpy.abs(dst1_)
         dst1_res = dst1_[mask2dist1]
-        mask1dist2 =  numpy.abs(dst2) <= b2 
+
+        mask1dist2 = numpy.abs(dst2) <= b2
         dst2_ = dst2[mask1dist2]
-        mask2dist2 = b1 <= numpy.abs(dst2_) 
-        dst2_res = dst2_[mask2dist2]      
-        ################## needs a better rule
+        mask2dist2 = b1 <= numpy.abs(dst2_)
+        dst2_res = dst2_[mask2dist2]
+
         if len(dst1_res) == 0:
             dist1counts.append(1)
         else:
-            dist1counts.append(len(dst1_res))            
+            dist1counts.append(len(dst1_res))
+
         if len(dst2_res) == 0:
             dist2counts.append(1)
-        else:            
-            dist2counts.append(len(dst2_res))       
-
-        
+        else:
+            dist2counts.append(len(dst2_res))
 
     kl_res = entropy(dist1counts, dist2counts, base=2)
+
     if kl_res == numpy.inf:
         return 1
     else:
-       return kl_res
+        return kl_res
 
+def compare_distributions(emp_folder,sim_folder):
+    sim_data_path = os.path.join(sim_folder, "simulation_summaries")
     
-
-
-#################### test ##########################################################################################
-def alt_test():
-    mu1, sigma1 = 1, 0.1
-    mu2, sigma2 = 2, 0.1
-    mu3, sigma3 = 1, 0.1
-    mu4, sigma4 = 2, 0.1   
+    ### empirical distributions
+    e_num_genes = numpy.loadtxt(os.path.join(emp_folder, "num_genes.txt"))
+    e_num_species = numpy.loadtxt(os.path.join(emp_folder, "num_species.txt"))
+    e_median_rtt = numpy.loadtxt(os.path.join(emp_folder, "median_rtt.txt"))
+    e_duplications = numpy.loadtxt(os.path.join(emp_folder, "duplications.txt"))
     
-    dist_1 = numpy.concatenate((numpy.random.normal(mu1, sigma1, 100),numpy.random.normal(mu2, sigma2, 100) ))
-    dist_2 = numpy.concatenate((numpy.random.normal(mu3, sigma3, 100),numpy.random.normal(mu4, sigma4, 100) ))   
-    
-    K_L_Divergence = divergence(dist_1,dist_2)
-    
-    data = {
-      "dist_1": dist_1,
-      "dist_2": dist_2
-    }
-    df = pandas.DataFrame(data)
-    
-    x1 = df['dist_1']
-    x2 = df['dist_2']
-    kwargs = dict(hist_kws={'alpha':.6}, kde_kws={'linewidth':2})        
-    plt.figure(figsize=(10,7), dpi= 80)
-    sns.distplot(x1, color="dodgerblue", label="dist_1", **kwargs)
-    sns.distplot(x2, color="orange", label="dist_2", **kwargs)
-    plt.suptitle(str(K_L_Divergence), size=16)
-    plt.legend();
-    plt.show()
-
-
-
-
-
-def test():  
-    mu, sigma = 1, 0.1 
-    dist_1 = numpy.random.normal(mu, sigma, 100)
-    dist_2 = numpy.random.normal(mu, sigma  + 0.01, 100)
-    
-    KL_result = []
-    Dist = []
-    for i in range(0,200):
-        for rep in range(0,10):
-            dist_1 = numpy.random.normal(1, sigma, 100)
-            dist_2 = numpy.random.normal(i/100, sigma, 100)
-            K_L_Divergence = divergence(dist_1,dist_2) 
-            KL_result.append(K_L_Divergence)
-            Dist.append(i)
-    plt.scatter(Dist,KL_result)
-    plt.show()
+    ### simulation distributions
+    s_num_genes = numpy.loadtxt(os.path.join(sim_data_path, "num_genes.txt"))
+    s_num_species = numpy.loadtxt(os.path.join(sim_data_path, "num_species.txt"))
+    s_median_rtt = numpy.loadtxt(os.path.join(sim_data_path, "median_rtt.txt"))
+    s_duplications = numpy.loadtxt(os.path.join(sim_data_path, "duplication_counts.txt"))
     
     
-    #################################
+
+    # --- CALCULATE ---
+    N_genes = divergence(e_num_genes, s_num_genes)
+    N_species = divergence(e_num_species, s_num_species)
+    N_rtt = divergence(e_median_rtt, s_median_rtt)
+    N_duplications = divergence(e_duplications, s_duplications)
     
-    data = {
-      "dist_1": dist_1,
-      "dist_2": dist_2
-    }
-    df = pandas.DataFrame(data)
+    distance = (N_genes + N_species + N_rtt + N_duplications) / 4
+    distance = (N_genes + N_species + N_duplications) / 3
     
-    x1 = df['dist_1']
-    x2 = df['dist_2']
+    score = 1 / (1 + distance)
+    return (",".join([str(N_genes),str(N_species),str(N_duplications)]))
+
     
-    kwargs = dict(hist_kws={'alpha':.6}, kde_kws={'linewidth':2})
-    K_L_Divergence = divergence(dist_1,dist_2)
-    plt.figure(figsize=(10,7), dpi= 80)
-    sns.distplot(x1, color="dodgerblue", label="dist_1", **kwargs)
-    sns.distplot(x2, color="orange", label="dist_2", **kwargs)
-    plt.suptitle(str(K_L_Divergence), size=16)
-    plt.legend();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed Jun 17 14:02:26 2026
+
+@author: Biol0216
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Apr 23 11:19:47 2026
 
 @author: JH
@@ -13,50 +20,52 @@ import random
 import shutil
 import subprocess
 import time
-
+import csv
+import numpy as np
 import scripts.GeneticAlgorithm.ScoreSomeParameters as ScoreSomeParameters
-
-
 
 
 def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file_path,default_species_pick):
     ###### import scripts here...
-
+    print("Running GA using %s threads" % str(threads))
     os.mkdir(os.path.join(complete_parameters["output"],"Simulation_Temp_Files"))
-    def fitness_func(ga_instance, solution, solution_idx):
 
-        new_solution = []
-        for i in solution:
-            if i < 0:
-                new_solution.append(0.01)
-            else:
-                new_solution.append(i)
-                
-                
-                
-                
-                
-        print("input = " + str([new_solution[0],new_solution[1],new_solution[2]]))
-        try:
-            output, outputdir = ScoreSomeParameters.main(new_solution[0],new_solution[1],new_solution[2],complete_parameters,current_file_path,default_species_pick)
-        except subprocess.CalledProcessError as e:
-                outputdir = os.path.join("/local/home/biol0216/Simulation/Tuning/GA/GA/sim_training_v1/simulation_runs/", [i for i in (str(e).split("/")) if len(i) == 32][0])
-                output = "1000,1000,1000"
-       	shutil.rmtree(outputdir) 
-       	print([new_solution[0],new_solution[1],new_solution[2]])
-       	fitness_results = output.split(",")
-       	fitness_values = []
-       	fitness_results = output.split(",")
-       	for i in fitness_results:
-            I = 1 + float(i)
-            fitness_values.append(1/float(I))
-       	print("Results = " + str(fitness_values))
-       	return fitness_values
+
+
 	
-
-    #### read function...
+    def fitness_func(ga_instance, solution, solution_idx):
+        new_solution = [max(0.01, float(x)) for x in solution]
+    
+        outputdir = None
+        try:
+            output, outputdir = ScoreSomeParameters.main(
+                new_solution[0],
+                new_solution[1],
+                new_solution[2],
+                complete_parameters,
+                current_file_path,
+                default_species_pick
+            )
+    
+            fitness_results = output.split(",")
+            fitness_values = []
+            for i in fitness_results:
+                I = 1 + float(i)
+                fitness_values.append(1 / float(I))
+    
+            return fitness_values
+    
+        except Exception as e:
+            print("Fitness evaluation failed:", e)
+            return [0.0, 0.0, 0.0]
+    
+        finally:
+            if outputdir and os.path.exists(outputdir):
+                shutil.rmtree(outputdir, ignore_errors=True)
+        #### read function...
 
     """
+    #Example:
     {'output': 'GA_TEST_OUTPUT', 
      'Orthogroups': '50', 
      'generations': '5', 
@@ -93,7 +102,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
     mutation_percent_genes = int(complete_parameters["mutation_percent_genes"])
     sample_size = int(complete_parameters["sample_size"])
     start = time.time()
-    
+    time_limit = "time_300"
     
     
     ga_instance = pygad.GA(num_generations=num_generations,
@@ -109,26 +118,89 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
                        mutation_type=mutation_type,
                        mutation_percent_genes=mutation_percent_genes,
                        save_solutions=True,
-		       parallel_processing=int(complete_parameters['parallel_processing'])
+                       gene_space=[
+                            {"low": 0.01, "high": 10.0},
+                            {"low": 0.01, "high": 10.0},
+                            {"low": 0.01, "high": 10.0},
+                        ],
+                       save_best_solutions=True,
+                       #stop_criteria=time_limit, ## unsupported??
+                       suppress_warnings=True,
+		       parallel_processing=int(threads)
 			)
 
 
     end = time.time()
     ga_instance.run()
 
-    solution, solution_fitness, solution_idx = ga_instance.best_solution()
+
+
+
+
+    report_path = os.path.join(
+        complete_parameters["output"],
+        "best_solution_per_generation.csv"
+    )
+
+    parameter_names = [
+        "parameter_1",
+        "parameter_2",
+        "parameter_3"
+    ]
+
+    fitness_names = [
+        "fitness_1",
+        "fitness_2",
+        "fitness_3"
+    ]
+
+    with open(report_path, mode="w", newline="") as csv_file:
+        writer = csv.writer(csv_file)
+
+        header = (
+            ["generation"]
+            + parameter_names
+            + fitness_names
+            + ["fitness_sum"]
+        )
+
+        writer.writerow(header)
+
+        for generation, best_solution in enumerate(ga_instance.best_solutions, start=1):
+
+            best_fitness = ga_instance.best_solutions_fitness[generation - 1]
+
+            # Make sure fitness is always list-like.
+            # This matters because PyGAD may return scalar fitness for single-objective
+            # and list/array fitness for multi-objective.
+            if isinstance(best_fitness, (list, tuple, np.ndarray)):
+                fitness_values = list(best_fitness)
+            else:
+                fitness_values = [best_fitness]
+
+            fitness_sum = sum(float(x) for x in fitness_values)
+
+            row = (
+                [generation]
+                + list(best_solution)
+                + fitness_values
+                + [fitness_sum]
+            )
+
+            writer.writerow(row)
+
+
+    solution, solution_fitness, solution_idx = ga_instance.best_solution()    
+    with open(report_path,"a") as report:
+        report.write("Parameters of the best solution : {solution}\n".format(solution=solution))
+        report.write("Fitness value of the best solution = {solution_fitness}\n".format(solution_fitness=solution_fitness))
+        report.write("took : %s\n" % str(end- start))
     print("Parameters of the best solution : {solution}".format(solution=solution))
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("took : %s" % str(end- start))
-    quit()
-	#ga_instance.plot_new_solution_rate(save_dir="new_solution_rate")
-	#ga_instance.plot_fitness(save_dir="plot_fitness")
-
-
-
-
-
-
+    print("Saved GA report to: %s" % report_path)
+    #print(ga_instance.best_solutions_fitness)
+    #return solution, solution_fitness, report_path
 
 
 

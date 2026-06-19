@@ -428,9 +428,9 @@ def run_pfam(complete_parameters, output_abolsute_path, threads, current_file_pa
 def run_GA(complete_parameters, output_abolsute_path, threads, current_file_path):
 
     #Saccharomyces_cerevisiae.fa
-    default_species_pick = os.path.join(current_file_path,"pfam_genomes","Saccharomyces_cerevisiae.fa")
+    #default_species_pick = os.path.join(current_file_path,"PFAM","pfam_genomes","Saccharomyces_cerevisiae")
     #default_pfam_pick =  os.path.join(current_file_path,"pfam_genomes","Saccharomyces_cerevisiae.fa")
-    
+    default_species_pick = "Saccharomyces_cerevisiae"
     ### now read pass this data and pathing to the GA function calls...
     ## import GA functionality from scripts pathing..
     import scripts.GeneticAlgorithm.GeneticAlgorithm as GA

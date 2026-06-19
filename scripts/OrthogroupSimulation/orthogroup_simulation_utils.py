@@ -1023,7 +1023,7 @@ def RunOrthogroup(outname, args):
         CountDuplicationLossTransfer(outname, args)
         Orthologs(outname, args)
         OrthologParsing(outname, args)
-    print("done an orthogroup")
+    #print("done an orthogroup")
 
 def RunOrthogroupMultiProc(n, outdir, threads, args):
     # Build starting genome once
