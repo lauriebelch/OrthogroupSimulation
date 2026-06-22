@@ -11,7 +11,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-N_ORTHOGROUPS_TO_SAMPLE = 250
+N_ORTHOGROUPS_TO_SAMPLE = 1000
 
 def write_list(output_dir, filename, values, fmt):
     with open(os.path.join(output_dir, filename), "w") as f:
