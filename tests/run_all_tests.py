@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-'''
-"Script to run the unit testing
-'''
+"""
+Script to run the unit tests.
+"""
 
 import glob
-import importlib
+import importlib.util
 import os
 import sys
 import traceback
@@ -19,19 +19,27 @@ TESTS_DIR = os.path.join(REPO_ROOT, "tests")
 
 
 ## function to find the individual unit test scripts, which are in format test_*.py
-def discover_test_modules():
-    paths = sorted(glob.glob(os.path.join(TESTS_DIR, "test_*.py")))
-    module_names = []
-    for path in paths:
-        file_name = os.path.basename(path)
-        module_names.append("tests." + file_name[:-3])
-    return module_names
+def discover_test_files():
+    return sorted(glob.glob(os.path.join(TESTS_DIR, "test_*.py")))
+
+
+## load a test file directly from its path, rather than as "tests.test_x".
+## avoids any clash with a "tests" package that might already be installed
+## in the environment (e.g. from a third-party dependency) shadowing the
+## local tests/ folder.
+def load_module(path):
+    module_name = os.path.splitext(os.path.basename(path))[0]
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 ## function to run a test module
-def run_module(module_name, results):
+def run_module(path, results):
+    module_name = os.path.splitext(os.path.basename(path))[0]
     # first check that its all importable and runnable
     try:
-        module = importlib.import_module(module_name)
+        module = load_module(path)
     except Exception as exc:
         print(f"\n{module_name}: IMPORT ERROR -> {exc!r}")
         traceback.print_exc()
@@ -61,8 +69,8 @@ def run_module(module_name, results):
 # main will do the tests and print the results
 def main():
     results = {"passed": [], "failed": [], "import_errors": []}
-    for module_name in discover_test_modules():
-        run_module(module_name, results)
+    for path in discover_test_files():
+        run_module(path, results)
     total = len(results["passed"]) + len(results["failed"])
     print("\n" + "=" * 60)
     print(f"Modules with import errors: {len(results['import_errors'])}")
