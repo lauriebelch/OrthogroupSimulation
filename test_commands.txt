@@ -1,14 +1,7 @@
 
 #### TEST THE GET PARAMETERS BIT ######
 
-python OrthoSim.py \
-    --Get-Parameters \
-    --output ../OrthoTrain_analysis/Training_FastOMA \
-    --tool FASTOMA \
-    --tool-output /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_output \
-    --tools-proteomes /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_input \
-    --tool-tree /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/OrthoBench/fastoma_output/species_tree_checked.nwk \
-    --threads 32
+python OrthoSim.py --Get-Parameters --output ../OrthoTrain_analysis/Training_FastOMA --tool FASTOMA --tool-output /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/empiricaldata_qfoOrthobench/OrthoBench/fastoma_output --tools-proteomes /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/empiricaldata_qfoOrthobench/OrthoBench/fastoma_input --tool-tree /local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/empiricaldata_qfoOrthobench/OrthoBench/fastoma_output/species_tree_checked.nwk --threads 32
 
 ## rm -rf ../OrthoTrain_analysis/Training_FastOMA
 
