@@ -215,14 +215,21 @@ Provide Data for parameters : thing about it : supported options = OF3, FastOMA.
     return parser.parse_args()
 
 def check_missing(requirements,args):
-    missing = []
-    complete_parameters = {}
-    for r in requirements:
-        if args[r] == None:
-            missing.append(r)
-        else:
-            complete_parameters[r] = args[r] 
-    return missing,complete_parameters   
+    # "requirements" only tells us what's required for THIS function call.
+    # complete_parameters should carry through every flag the user actually
+    # supplied (e.g. optional flags like --tools-proteomes/--tool-tree), not
+    # just the required ones, otherwise they get silently dropped here and
+    # never reach the workflow functions below.
+    args_,args_og_sim,args_GA,args_shared = args_dicts()
+    known_keys = set(
+        arg_parse_reformat(list(args_.values()))
+        + arg_parse_reformat(list(args_og_sim.values()))
+        + arg_parse_reformat(list(args_GA.values()))
+        + arg_parse_reformat(list(args_shared.values()))
+    )
+    missing = [r for r in requirements if args[r] == None]
+    complete_parameters = {k: v for k, v in args.items() if k in known_keys and v is not None}
+    return missing,complete_parameters
 
 
 def check_options(function_call,args):
