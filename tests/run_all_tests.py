@@ -23,10 +23,7 @@ def discover_test_files():
     return sorted(glob.glob(os.path.join(TESTS_DIR, "test_*.py")))
 
 
-## load a test file directly from its path, rather than as "tests.test_x".
-## avoids any clash with a "tests" package that might already be installed
-## in the environment (e.g. from a third-party dependency) shadowing the
-## local tests/ folder.
+## load a test file directly from its path
 def load_module(path):
     module_name = os.path.splitext(os.path.basename(path))[0]
     spec = importlib.util.spec_from_file_location(module_name, path)
