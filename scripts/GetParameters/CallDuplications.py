@@ -677,13 +677,13 @@ def main(fastoma_out, output_folder_path, n_threads):
         for tree_file in tree_files
     ]
 
-    if n_threads == 1:
+    if int(n_threads) == 1:
         results = [
             ProcessGeneTree(*arg)
             for arg in args
         ]
     else:
-        with Pool(n_threads) as pool:
+        with Pool(int(n_threads)) as pool:
             results = pool.starmap(ProcessGeneTree, args)
 
     results = sorted(
