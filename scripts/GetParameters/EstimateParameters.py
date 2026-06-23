@@ -490,7 +490,7 @@ def main(orthofinder_folder, output_folder, n_threads):
     os.makedirs(output_dir, exist_ok=True)
 
     threads_per_job = 1
-    max_workers = n_threads
+    max_workers = int(n_threads)
 
     orthogroups = []
 
