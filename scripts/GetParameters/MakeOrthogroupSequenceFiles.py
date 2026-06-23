@@ -61,7 +61,7 @@ def main(orthofinder_folder, output_folder, n_threads):
         fieldnames = reader.fieldnames
 
     # --- STEP 5: write one sequence file per orthogroup ---
-    with Pool(processes=n_threads) as pool:
+    with Pool(processes=int(n_threads)) as pool:
         pool.starmap(
             process_row,
             [
