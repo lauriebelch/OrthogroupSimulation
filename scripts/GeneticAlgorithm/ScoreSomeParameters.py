@@ -201,8 +201,8 @@ def main(dup_rate,loss_rate,gbc_val,complete_parameters,current_file_path,defaul
 
 
     # --- modify parameter file INSIDE copied folder ---
-    #param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
-    #modify_param_file(complete_parameters,param_file,current_file_path,default_species_pick,run_dir, dup_rate, loss_rate, gbc_val)
+    param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
+    modify_param_file(complete_parameters,param_file,current_file_path,default_species_pick,run_dir, dup_rate, loss_rate, gbc_val)
 
 
     # --- paths to scripts ---
