@@ -164,7 +164,7 @@ python OrthoSim.py \
 | Option | Allowed / default | Meaning |
 |---|---|---|
 | `--output` | NA | Output directory for extracted parameters. |
-| `--tool` | `OF3`, `FASTOMA`, `BROCOLI`, `SONICPARANOID2` | Orthogroup inference tool used to generate the empirical orthogroups. |
+| `--tool` | `OF3`, `FASTOMA`, `BROCCOLI`, `SONICPARANOID2` | Orthogroup inference tool used to generate the empirical orthogroups. |
 | `--tool-output` | NA | Path to the output directory from the orthogroup inference run. |
 
 #### Additional requirements by tool
@@ -173,7 +173,7 @@ python OrthoSim.py \
 |---|---|---|
 | `OF3` | None | OrthoFinder output contains the information needed for this workflow. |
 | `FASTOMA` | `--tools-proteomes` | Input proteomes are needed to map genes back to species. |
-| `BROCOLI` | `--tool-tree`, `--tools-proteomes` | The species tree and input proteomes are needed to process Broccoli output. |
+| `BROCCOLI` | `--tool-tree`, `--tools-proteomes` | The species tree and input proteomes are needed to process Broccoli output. |
 | `SONICPARANOID2` | `--tool-tree`, `--tools-proteomes` | The species tree and input proteomes are needed to process SonicParanoid2 output. |
 
 #### Optional options
