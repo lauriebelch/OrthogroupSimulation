@@ -4,14 +4,15 @@ import subprocess
 import statistics
 import numpy as np
 from multiprocessing import Pool
-from ete3 import Tree
+#from ete3 import Tree
+from ete4 import Tree
 import math
 from itertools import combinations
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-N_ORTHOGROUPS_TO_SAMPLE = 1000
+N_ORTHOGROUPS_TO_SAMPLE = 100
 
 def write_list(output_dir, filename, values, fmt):
     with open(os.path.join(output_dir, filename), "w") as f:
@@ -132,8 +133,11 @@ def process_orthogroup(og_file, mean_species_rtt, output_dir, orthogroup_seqs_di
         except Exception as e:
             print(f"Error getting species/gene counts for {base}: {e}")
 
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        target_dir = os.path.join(current_dir, '..', '..','bin','iqtree3')
         iqtree_cmd = [
-            "iqtree3",
+        #    "iqtree3",
+            target_dir,
             "-s", trimmed_file,
             "-m", "JTT+G4+I",
             "-pre", iqtree_prefix,
@@ -166,12 +170,12 @@ def process_orthogroup(og_file, mean_species_rtt, output_dir, orthogroup_seqs_di
 
         if os.path.exists(tree_file):
             try:
-                tree = Tree(tree_file, format=1)
-                root = tree.get_tree_root()
+                tree = Tree(tree_file, parser=1)
+                root = tree.root
 
                 rtt_lengths = [
-                    root.get_distance(leaf)
-                    for leaf in tree.iter_leaves()
+                    tree.get_distance(root,leaf)
+                    for leaf in tree.leaves()
                 ]
                 median_rtt = statistics.median(rtt_lengths) if rtt_lengths else None
 
@@ -185,37 +189,42 @@ def process_orthogroup(og_file, mean_species_rtt, output_dir, orthogroup_seqs_di
                 ###
                 # --- make ultrametric reference tree ---
                 tree_ultra = tree.copy()
-                tree_ultra.convert_to_ultrametric()
+                tree_ultra.to_ultrametric()
                 # map nodes between trees (important: same traversal order)
                 nodes = list(tree.traverse())
                 nodes_ultra = list(tree_ultra.traverse())
                 log_diffs = []
+
                 for n, nu in zip(nodes, nodes_ultra):
                     if n.up is None:
                         continue  # skip root
-                    if n.dist > 0 and n.up.dist > 0 and nu.dist > 0 and nu.up is not None:
+                    #if n.dist > 0 and n.up.dist > 0 and nu.dist > 0 and nu.up is not None:
+                    if n.dist > 0 and nu.dist > 0 and nu.up is not None:
+                        if not nu.up.dist:
+                            nu.up.dist = 0
                         # observed branch lengths
                         obs = n.dist
                         obs_parent = n.up.dist
                         # expected (ultrametric) branch lengths
-                        exp = nu.dist
+                        exp = nu.dist		
+
                         exp_parent = nu.up.dist if nu.up else None
                         if exp_parent and exp_parent > 0:
                             # relative rates
                             rate = obs / exp
                             rate_parent = obs_parent / exp_parent
                             log_diffs.append(math.log(rate) - math.log(rate_parent))
+
                 sigma_tree = statistics.stdev(log_diffs) if len(log_diffs) > 1 else None
                 ###
-  
-                leaves = list(tree.iter_leaves())
+                leaves = list(tree.leaves())
                 wiener = sum(tree.get_distance(a, b) for a, b in combinations(leaves, 2))
 
                 total_bl = sum(branch_lengths)
                 internal_bl = sum(
                     n.dist
                     for n in tree.traverse()
-                    if not n.is_leaf() and n.dist is not None and n.dist > 0
+                    if not n.is_leaf and n.dist is not None and n.dist > 0
                 )
 
                 treeness = internal_bl / total_bl if total_bl > 0 else None
@@ -519,12 +528,12 @@ def main(orthofinder_folder, output_folder, n_threads):
     num_species_values = []
     num_genes_values = []
     print(species_tree_file)
-    species_tree = Tree(species_tree_file, format=1)
-    species_tree.convert_to_ultrametric()
-    species_root = species_tree.get_tree_root()
+    species_tree = Tree(species_tree_file, parser=1)
+    species_tree.to_ultrametric()
+    species_root = species_tree.root
     species_rtt = [
-        species_root.get_distance(leaf)
-        for leaf in species_tree.iter_leaves()
+        species_tree.get_distance(leaf,species_root)
+        for leaf in species_tree.leaves()
     ]
     mean_species_rtt = statistics.mean(species_rtt)
 
@@ -663,14 +672,14 @@ def main(orthofinder_folder, output_folder, n_threads):
             if node.dist is not None:
                 node.dist *= scale_factor
 
-        species_tree.convert_to_ultrametric()
+        species_tree.to_ultrametric()
 
         output_tree_file = os.path.join(
             output_dir,
             "rescaled_ultrametric_species_tree.nwk",
         )
 
-        species_tree.write(outfile=output_tree_file)
+        species_tree.write(outfile=output_tree_file,parser=1)
 
     param_file = os.path.join(output_dir, "simulation_parameters.txt")
 
@@ -699,8 +708,8 @@ def main(orthofinder_folder, output_folder, n_threads):
         ###
 
         f.write("gbc=6.75\n")
-        f.write("sagephy_path=bin/sagephy-1.0.0.jar\n")
-        f.write("iqtree_path=bin/iqtree3\n")
+        #f.write("sagephy_path=bin/sagephy-1.0.0.jar\n")
+        #f.write("iqtree_path=bin/iqtree3\n")
 
     print("Parameter estimation complete. Summary written to parameter_estimates.txt")
     done_file = os.path.join(output_dir, "DONE")

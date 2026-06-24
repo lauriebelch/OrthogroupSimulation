@@ -4,7 +4,8 @@
 import os
 from copy import deepcopy
 from multiprocessing import Pool
-from ete3 import Tree
+#from ete3 import Tree
+from ete4 import Tree
 
 
 # ============================================================
@@ -25,7 +26,7 @@ def GetSpeciesID(gene_name):
 def GetRepresentedSpecies(gene_tree):
     species = set()
 
-    for leaf in gene_tree.get_leaves():
+    for leaf in gene_tree.leaves():
         species.add(GetSpeciesID(leaf.name))
 
     return species
@@ -34,7 +35,7 @@ def GetRepresentedSpecies(gene_tree):
 def GetGenesFromSpecies(gene_tree, species_set):
     genes = []
 
-    for leaf in gene_tree.get_leaves():
+    for leaf in gene_tree.leaves():
         species_id = GetSpeciesID(leaf.name)
 
         if species_id in species_set:
@@ -46,14 +47,14 @@ def GetGenesFromSpecies(gene_tree, species_set):
 def GetSpeciesUnderGeneNode(gene_node):
     species = set()
 
-    for leaf in gene_node.get_leaves():
+    for leaf in gene_node.leaves():
         species.add(GetSpeciesID(leaf.name))
 
     return species
 
 
 def GetSpeciesUnderSpeciesNode(species_node):
-    return set(species_node.get_leaf_names())
+    return set(species_node.leaf_names())
 
 
 def JoinSet(values):
@@ -439,7 +440,7 @@ def CountSpeciesOverlapDuplications(rooted_gene_tree):
     duplication_count = 0
 
     for node in rooted_gene_tree.traverse("postorder"):
-        if node.is_leaf():
+        if node.is_leaf:
             continue
 
         child_species_sets = []
@@ -447,7 +448,7 @@ def CountSpeciesOverlapDuplications(rooted_gene_tree):
         for child in node.children:
             species_set = set()
 
-            for leaf in child.get_leaves():
+            for leaf in child.leaves():
                 species_set.add(GetSpeciesID(leaf.name))
 
             child_species_sets.append(species_set)
@@ -484,8 +485,8 @@ def ProcessGeneTree(tree_file, species_tree_path):
     orthogroup = os.path.basename(os.path.dirname(tree_file))
 
     try:
-        species_tree = Tree(species_tree_path, format=1)
-        gene_tree = Tree(tree_file, format=1)
+        species_tree = Tree(species_tree_path, parser=1)
+        gene_tree = Tree(tree_file, parser=1)
 
         rooted_tree, info = RootGeneTreeWithSpeciesTree(
             gene_tree,

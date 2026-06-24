@@ -5,8 +5,8 @@ import os
 import csv
 import re
 from multiprocessing import Pool
-from ete3 import Tree
-
+#from ete3 import Tree
+from ete4 import Tree
 
 def main(orthofinder_folder, output_folder, n_threads):
 
@@ -118,9 +118,9 @@ def Save_Numeric_Species_Tree(input_base, SpeciesDict):
             f"Species tree not found: {species_tree_src}"
         )
 
-    tree = Tree(species_tree_src, format=1)
+    tree = Tree(species_tree_src, parser=1)
 
-    for leaf in tree.get_leaves():
+    for leaf in tree.leaves():
         leaf_name = leaf.name
         leaf_base = os.path.splitext(leaf_name)[0]
 
@@ -138,7 +138,7 @@ def Save_Numeric_Species_Tree(input_base, SpeciesDict):
 
     tree.write(
         outfile=numeric_species_tree_path,
-        format=1,
+        parser=1,
     )
 
     with open(species_mapping_path, "w", newline="") as out:

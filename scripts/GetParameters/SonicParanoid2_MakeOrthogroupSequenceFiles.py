@@ -6,7 +6,8 @@ import csv
 import glob
 from collections import defaultdict
 from Bio import SeqIO
-from ete3 import Tree
+#from ete3 import Tree
+from ete4 import Tree
 import shutil
 
 
@@ -419,11 +420,11 @@ def check_species_consistency(
             + "\n".join(extra_in_proteomes)
         )
 
-    tree = Tree(species_tree_src, format=1)
+    tree = Tree(species_tree_src, parser=1)
 
     species_from_tree = set(
         leaf.name
-        for leaf in tree.get_leaves()
+        for leaf in tree.leaves()
     )
 
     missing_from_tree = sorted(
@@ -540,9 +541,9 @@ def save_numeric_species_tree(
         species_name_to_number.csv
     """
 
-    tree = Tree(species_tree_src, format=1)
+    tree = Tree(species_tree_src, parser=1)
 
-    for leaf in tree.get_leaves():
+    for leaf in tree.leaves():
         if leaf.name not in species_to_id:
             raise ValueError(
                 f"Species '{leaf.name}' is in the species tree but was not "
@@ -553,7 +554,7 @@ def save_numeric_species_tree(
 
     tree.write(
         outfile=numeric_species_tree_path,
-        format=1,
+        parser=1,
     )
 
     with open(species_mapping_path, "w", newline="") as out:

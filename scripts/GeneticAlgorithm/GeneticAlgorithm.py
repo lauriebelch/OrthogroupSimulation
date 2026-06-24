@@ -23,16 +23,35 @@ import time
 import csv
 import numpy as np
 import scripts.GeneticAlgorithm.ScoreSomeParameters as ScoreSomeParameters
+#dup_rate,loss_rate,gbc_val
+def write_config_file(complete_parameters,solution,completed_parameters):
 
+    input_folder = os.path.abspath(complete_parameters["Orthogroup_train_results"])
+
+    input_parameter_file = param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
+
+
+    #ultrametric_tree
+    #gap_file
+    with open(completed_parameters,"a") as comp_para:
+        for line in open(input_parameter_file,"r").readlines():
+            if line.startswith("max_duplication_rate"):
+                comp_para.write("max_duplication_rate=%s\n" % str(solution[0]))
+            elif line.startswith("max_loss_rate"):
+                comp_para.write("max_loss_rate=%s\n" % str(solution[1]))
+            elif line.startswith("gbc"):
+                comp_para.write("gbc=%s\n" % str(solution[2]))
+            else:
+                if not line.startswith("sagephy") and not line.startswith("iqtree"):
+                    comp_para.write(line)
+        comp_para.write("ultrametric_tree=%s\n" % os.path.join(input_folder,"TrainingResults","SimulationInputs","species_tree.nwk"))
+        comp_para.write("gap_file=%s\n" % os.path.join(input_folder,"TrainingResults","SimulationInputs","gap_position_profile_counts.tsv"))
 
 def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file_path,default_species_pick):
     ###### import scripts here...
     print("Running GA using %s threads" % str(threads))
     os.mkdir(os.path.join(complete_parameters["output"],"Simulation_Temp_Files"))
 
-
-
-	
     def fitness_func(ga_instance, solution, solution_idx):
         new_solution = [max(0.01, float(x)) for x in solution]
     
@@ -199,10 +218,13 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("took : %s" % str(end- start))
     print("Saved GA report to: %s" % report_path)
+    completed_parameter_file = os.path.join(complete_parameters['output'],complete_parameters['output'] + "_CompletedParameterFile.txt")
+    write_config_file(complete_parameters,solution,completed_parameter_file)
+    print("Simulation config file report written to: %s" % completed_parameter_file)
+
     #print(ga_instance.best_solutions_fitness)
     #return solution, solution_fitness, report_path
-
-
+    #dup_rate,loss_rate,gbc_val
 
 
 
