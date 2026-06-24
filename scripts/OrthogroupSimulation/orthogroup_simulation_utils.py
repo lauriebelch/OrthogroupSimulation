@@ -433,7 +433,8 @@ def SimulateAlignmentPartition(outname, args):
     tree_outfile = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned_relaxed_relabelled.tree")
     root_seq_path = os.path.join(str(args.o), 'temporary_files', f"{outname}.root.seq")
     partition_path = os.path.join(str(args.o), 'temporary_files', str(outname)+".partionfile.txt")
-    indel_size = "GEO{2.5},GEO{2.5}"
+    #indel_size = "GEO{2.5},GEO{2.5}"
+    indel_size = "GEO{1},GEO{1}"
     # define output path
     output1 = os.path.join(str(args.o), 'temporary_files', str(outname) + ".alignment")
     # command to be run
