@@ -1,5 +1,5 @@
 output=GA_TEST_OUTPUT
-parameter_folder=PARAMETERS_FOLDER
+Orthogroup_train_results=PARAMETERS_FOLDER
 generations=5
 sample_size=100
 num_parents_mating=4
