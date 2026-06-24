@@ -231,7 +231,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("took : %s" % str(end- start))
     print("Saved GA report to: %s" % report_path)
-    completed_parameter_file = os.path.join(complete_parameters['output'],complete_parameters['output'] + "_CompletedParameterFile.txt")
+    completed_parameter_file = os.path.join(complete_parameters['output'],"GA_CompletedParameterFile.txt")
     write_config_file(complete_parameters,solution,completed_parameter_file)
     print("Simulation config file report written to: %s" % completed_parameter_file)
 
