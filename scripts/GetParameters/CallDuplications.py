@@ -54,7 +54,7 @@ def GetSpeciesUnderGeneNode(gene_node):
 
 
 def GetSpeciesUnderSpeciesNode(species_node):
-    return set(species_node.leaf_names())
+    return set(species_node.leaves())
 
 
 def JoinSet(values):
@@ -226,7 +226,7 @@ def FindBestGeneRootForSplit(gene_tree, represented_species, split):
     best_up_species = set()
 
     for node in gene_tree.traverse("postorder"):
-        if node.is_root():
+        if node.is_root:
             continue
 
         down_species = GetSpeciesUnderGeneNode(node)
@@ -342,7 +342,7 @@ def RootGeneTreeWithSpeciesTree(gene_tree, species_tree):
     rooted_tree = deepcopy(gene_tree)
 
     represented_species = GetRepresentedSpecies(rooted_tree)
-    species_tree_species = set(species_tree.leaves())
+    species_tree_species = set(species_tree.leaf_names())
 
     info = {
         "status": "",
