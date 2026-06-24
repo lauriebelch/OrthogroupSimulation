@@ -83,7 +83,9 @@ def prepare_proteomes(sim_dir):
 
     for f in fa_files:
         shutil.copy(f, dst / f"{f.stem}.fasta")
-
+    ## copy species tree
+    shutil.copy(SPECIES_TREE,sim_dir)
+    
     print(f"Prepared {len(fa_files)} proteomes:")
     print(f"  Source : {src}")
     print(f"  Dest   : {dst}")
