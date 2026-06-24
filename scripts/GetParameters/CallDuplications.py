@@ -54,7 +54,7 @@ def GetSpeciesUnderGeneNode(gene_node):
 
 
 def GetSpeciesUnderSpeciesNode(species_node):
-    return set(species_node.leaves())
+    return set(species_node.leaf_names())
 
 
 def JoinSet(values):
