@@ -2,7 +2,7 @@ import os
 import argparse
 import statistics
 from multiprocessing import Pool
-from ete3 import Tree
+from ete4 import Tree
 
 # --- USER SETTINGS ---
 MAX_WORKERS = 8  # number of parallel processes (edit as needed)
@@ -17,7 +17,7 @@ def process_tree(fname, tree_dir):
     path = os.path.join(tree_dir, fname)
 
     try:
-        tree = Tree(path, format=1)
+        tree = Tree(path, parser=1)
 
         root = tree.get_tree_root()
         rtt = [root.get_distance(leaf) for leaf in tree.iter_leaves()]

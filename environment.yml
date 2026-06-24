@@ -1,0 +1,16 @@
+name: orthotrain
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - biopython
+  - ete4
+  - mafft
+  - trimal
+  - java-jdk
+  - pip
+  - pip:
+      - pygad

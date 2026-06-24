@@ -9,7 +9,7 @@ Created on Wed Aug 13 08:59:11 2025
 from __future__ import annotations
 import os
 import sys
-import ete3
+import ete4
 import subprocess
 import random
 import csv
@@ -79,13 +79,13 @@ def LoadParameters(file_path):
 ## needed if we are going to do shuffling
 def FindRootNode(args):
     species_tree_file = str(args.s)
-    t1 = ete3.Tree(species_tree_file)
+    t1 = ete4.Tree(species_tree_file, parser=1)
     val = (2*len(t1)-2)
     return val
 
 def FindNSpecies(args):
     species_tree_file = str(args.s)
-    t1 = ete3.Tree(species_tree_file)
+    t1 = ete4.Tree(species_tree_file, parser=1)
     return len(t1)
 
 ##################################################
@@ -187,26 +187,37 @@ def RelabelRelaxedTree(outname, args):
             my_dict[col1] = col2
     # need a counter to track how many times each species appears
     species_counts = Counter()
-    # load tree in ete3
-    tree = ete3.Tree(tree_file, format=1, quoted_node_names=True)
+    # load tree in ete4 (we used quoted node names in ete3)
+    #tree = ete3.Tree(tree_file, format=1, quoted_node_names=True)
+    tree = ete4.Tree(tree_file, parser=1)
     #print(tree)
     # relabel tree, and get branch lengths
     total_length = 0
     num_branches = 0
     for node in tree.traverse():
-        if not node.is_root():
+        #if not node.is_root():
+        if not node.is_root:
             total_length += node.dist
             num_branches += 1
-        if node.is_leaf():
+        #if node.is_leaf():
+        if node.is_leaf:
             old_name = node.name
+            '''
             node.name2 = my_dict.get(node.name)
             species_counts[node.name2] += 1
             new_name = node.name2 + "_" + str(outname) + "_" + str(species_counts[node.name2])
+            '''
+            NAME2 = my_dict.get(node.name)
+            species_counts[NAME2] += 1
+            new_name = NAME2 + "_" + str(outname) + "_" + str(species_counts[NAME2])
+            ## and continue with old code
             node.name = new_name
             mappings.append((old_name, new_name))
+            
     mean_branch_length = total_length / num_branches
     # write relabelled tree
-    tree.write(format=1, outfile = tree_outfile)
+    #tree.write(format=1, outfile = tree_outfile)
+    tree.write(parser=1, outfile = tree_outfile)
     # add to logfile for this orthogroup
     # also log number of genes and number of species
     num_genes = sum(species_counts.values())       # total leaves
@@ -886,7 +897,7 @@ def PrepareForOrthologs(outname, args):
     with open(tree_file, "r") as f:
         raw = f.read().strip()
     clean = re.sub(r"\[.*?\]", "", raw, flags=re.S)
-    tree = ete3.Tree(clean, format=1)
+    tree = ete4.Tree(clean, parser=1)
     ## guest2host file
     g2h_file = os.path.join(str(args.o), "temporary_files", f"{outname}.pruned.guest2host")
     spec_nodes = set()
@@ -927,8 +938,10 @@ def Orthologs(outname, args):
             quit()
         # we get the children
         left, right = children
-        left_leaves = [l.name for l in left.iter_leaves()]
-        right_leaves = [l.name for l in right.iter_leaves()]
+        #left_leaves = [l.name for l in left.iter_leaves()]
+        #right_leaves = [l.name for l in right.iter_leaves()]
+        left_leaves = [l.name for l in left.leaves()]
+        right_leaves = [l.name for l in right.leaves()]
         # all pairs are orthologs
         # we use 'seen' to not 'double-count'
         for a in left_leaves:
