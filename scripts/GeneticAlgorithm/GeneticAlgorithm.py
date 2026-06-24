@@ -24,7 +24,7 @@ import csv
 import numpy as np
 import scripts.GeneticAlgorithm.ScoreSomeParameters as ScoreSomeParameters
 #dup_rate,loss_rate,gbc_val
-def write_config_file(complete_parameters,solution,completed_parameters):
+def write_config_file(complete_parameters,solution,completed_parameters_file):
     input_folder = os.path.abspath(complete_parameters["Orthogroup_train_results"])
 
     input_parameter_file = param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
@@ -32,7 +32,7 @@ def write_config_file(complete_parameters,solution,completed_parameters):
 
     #ultrametric_tree
     #gap_file
-    with open(completed_parameters,"a") as comp_para:
+    with open(completed_parameters_file,"a") as comp_para:
         for line in open(input_parameter_file,"r").readlines():
             if line.startswith("max_duplication_rate"):
                 comp_para.write("max_duplication_rate=%s\n" % str(solution[0]))
