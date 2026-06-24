@@ -27,7 +27,7 @@ def path_test(args):
             if os.path.isfile(os.path.abspath(value)) == False and os.path.isdir(os.path.abspath(value)) == False:
                 print("path not found %s" % (key + ":" + value))
                 s = s + 1
-    supported_tools = ["OF3","FASTOMA","BROCOLI","SONICPARANOID2"]
+    supported_tools = ["OF3","FASTOMA","BROCCOLI","SONICPARANOID2"]
     test = [i.lstrip('-').replace("-","_") for i in ["--tool"]]     
     for key,value in args.items():
         if key in supported_tools:
@@ -89,10 +89,10 @@ def args_dicts():
     ################################################# SHARED
     args_shared = {
             "OG_num":["--Orthogroups","NUMBER_OF_ORTHOGROUPS"],            
-            "tool":["--tool","OF3,FASTOMA,BROCOLI,SONICPARANOID2"],
+            "tool":["--tool","OF3,FASTOMA,BROCCOLI,SONICPARANOID2"],
             "Tool-output":["--tool-output","PATH_TO_TOOL_OUTPUT"],
-            "Tool-tree":["--tool-tree","PATH_TO_TOOL_TREE required for: BROCOLI, SONICPARANOID2 (these tools do not produce a species tree natively); optional override for FASTOMA"],
-            "Tool_input_Proteomes":["--tools-proteomes","PATH_TO_TOOLS_PROTEOMES required for: FASTOMA, BROCOLI, SONICPARANOID2"],
+            "Tool-tree":["--tool-tree","PATH_TO_TOOL_TREE required for: BROCCOLI, SONICPARANOID2 (these tools do not produce a species tree natively); optional override for FASTOMA"],
+            "Tool_input_Proteomes":["--tools-proteomes","PATH_TO_TOOLS_PROTEOMES required for: FASTOMA, BROCCOLI, SONICPARANOID2"],
             #"GA_scores":["--parameter-folder","PATH_TO_PARAMETERS note: output of --Get-Parameters"],
             "Config":["--Config","PATH_TO_CONFIG FILE"],
             }
@@ -350,8 +350,8 @@ def run_get_parameters(complete_parameters, output_abolsute_path, threads, curre
     tool = complete_parameters["tool"].lstrip().rstrip().upper()
 
     # Per-tool validation of optional flags not checked globally.
-    needs_proteomes = tool in ("FASTOMA", "BROCOLI", "SONICPARANOID2")
-    needs_tree      = tool in ("BROCOLI", "SONICPARANOID2")
+    needs_proteomes = tool in ("FASTOMA", "BROCCOLI", "SONICPARANOID2")
+    needs_tree      = tool in ("BROCCOLI", "SONICPARANOID2")
     missing = []
     if needs_proteomes and not complete_parameters.get("tools_proteomes"):
         missing.append("--tools-proteomes (required for %s)" % tool)
@@ -370,7 +370,7 @@ def run_get_parameters(complete_parameters, output_abolsute_path, threads, curre
     train_scripts = {
         "FASTOMA": "FastOMATrain.py",
         "OF3": "OrthoTrain.py",
-        "BROCOLI": "BroccoliTrain.py",
+        "BROCCOLI": "BroccoliTrain.py",
         "SONICPARANOID2": "SonicParanoid2Train.py",
     }
     if tool not in train_scripts:
