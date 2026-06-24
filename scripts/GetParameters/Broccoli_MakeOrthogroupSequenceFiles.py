@@ -9,8 +9,6 @@ from Bio import SeqIO
 from ete4 import Tree
 import shutil
 
-import sys
-csv.field_size_limit(sys.maxsize)
 
 def main(broccoli_output, broccoli_input, output_base, n_threads, tool_tree):
     """

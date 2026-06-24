@@ -9,7 +9,7 @@ Created on Wed Aug 13 08:59:11 2025
 from __future__ import annotations
 import os
 import sys
-import ete4
+from ete4 import Tree
 import subprocess
 import random
 import csv
@@ -85,7 +85,7 @@ def FindRootNode(args):
 
 def FindNSpecies(args):
     species_tree_file = str(args.s)
-    t1 = ete4.Tree(species_tree_file, parser=1)
+    t1 = Tree(species_tree_file, parser=1)
     return len(t1)
 
 ##################################################
@@ -189,7 +189,7 @@ def RelabelRelaxedTree(outname, args):
     species_counts = Counter()
     # load tree in ete4 (we used quoted node names in ete3)
     #tree = ete3.Tree(tree_file, format=1, quoted_node_names=True)
-    tree = ete4.Tree(tree_file, parser=1)
+    tree = Tree(tree_file, parser=1)
     #print(tree)
     # relabel tree, and get branch lengths
     total_length = 0
@@ -897,7 +897,7 @@ def PrepareForOrthologs(outname, args):
     with open(tree_file, "r") as f:
         raw = f.read().strip()
     clean = re.sub(r"\[.*?\]", "", raw, flags=re.S)
-    tree = ete4.Tree(clean, parser=1)
+    tree = Tree(clean, parser=1)
     ## guest2host file
     g2h_file = os.path.join(str(args.o), "temporary_files", f"{outname}.pruned.guest2host")
     spec_nodes = set()

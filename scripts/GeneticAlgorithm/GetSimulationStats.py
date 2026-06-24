@@ -19,8 +19,8 @@ def process_tree(fname, tree_dir):
     try:
         tree = Tree(path, parser=1)
 
-        root = tree.get_tree_root()
-        rtt = [root.get_distance(leaf) for leaf in tree.iter_leaves()]
+        root = tree.root
+        rtt = [tree.get_distance(root,leaf) for leaf in tree.leaves()]
 
         if rtt:
             return statistics.median(rtt)

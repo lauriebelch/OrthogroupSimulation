@@ -25,7 +25,6 @@ import numpy as np
 import scripts.GeneticAlgorithm.ScoreSomeParameters as ScoreSomeParameters
 #dup_rate,loss_rate,gbc_val
 def write_config_file(complete_parameters,solution,completed_parameters):
-
     input_folder = os.path.abspath(complete_parameters["Orthogroup_train_results"])
 
     input_parameter_file = param_file = os.path.join(complete_parameters["Orthogroup_train_results"],"TrainingResults","SimulationInputs", "simulation_parameters.txt")
@@ -46,6 +45,13 @@ def write_config_file(complete_parameters,solution,completed_parameters):
                     comp_para.write(line)
         comp_para.write("ultrametric_tree=%s\n" % os.path.join(input_folder,"TrainingResults","SimulationInputs","species_tree.nwk"))
         comp_para.write("gap_file=%s\n" % os.path.join(input_folder,"TrainingResults","SimulationInputs","gap_position_profile_counts.tsv"))
+
+
+def on_gen(ga):
+    percent = round((ga.generations_completed/ga.num_generations)*100)
+    print(f"\rCompleted: {percent}% ", end="", flush=True)
+
+
 
 def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file_path,default_species_pick):
     ###### import scripts here...
@@ -122,8 +128,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
     sample_size = int(complete_parameters["sample_size"])
     start = time.time()
     time_limit = "time_300"
-    
-    
+
     ga_instance = pygad.GA(num_generations=num_generations,
                        sample_size = sample_size,
                        num_parents_mating=num_parents_mating,
@@ -135,6 +140,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
                        crossover_type=crossover_type,
                        crossover_probability = crossover_probability,
                        mutation_type=mutation_type,
+                       on_generation=on_gen,
                        mutation_percent_genes=mutation_percent_genes,
                        save_solutions=True,
                        gene_space=[
@@ -148,9 +154,8 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
 		       parallel_processing=int(threads)
 			)
 
-
-    end = time.time()
     ga_instance.run()
+    end = time.time()
 
 
 
@@ -160,6 +165,8 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
         complete_parameters["output"],
         "best_solution_per_generation.csv"
     )
+
+
 
     parameter_names = [
         "parameter_1",
@@ -209,11 +216,17 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
             writer.writerow(row)
 
 
-    solution, solution_fitness, solution_idx = ga_instance.best_solution()    
+    solution, solution_fitness, solution_idx = ga_instance.best_solution()   
+
+
+ 
     with open(report_path,"a") as report:
         report.write("Parameters of the best solution : {solution}\n".format(solution=solution))
         report.write("Fitness value of the best solution = {solution_fitness}\n".format(solution_fitness=solution_fitness))
-        report.write("took : %s\n" % str(end- start))
+        report.write("took : %s\n\n" % str(end- start))
+        #report.write("*--------- Pygad Report ---------*")
+        #report.write(str(ga_instance.summary()))
+    print("\n*------- Results -------*")
     print("Parameters of the best solution : {solution}".format(solution=solution))
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("took : %s" % str(end- start))

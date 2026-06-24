@@ -342,7 +342,7 @@ def RootGeneTreeWithSpeciesTree(gene_tree, species_tree):
     rooted_tree = deepcopy(gene_tree)
 
     represented_species = GetRepresentedSpecies(rooted_tree)
-    species_tree_species = set(species_tree.get_leaf_names())
+    species_tree_species = set(species_tree.leaves())
 
     info = {
         "status": "",
