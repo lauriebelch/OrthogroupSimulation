@@ -32,11 +32,11 @@ from pathlib import Path
 # Machine-specific fixed paths — edit these once for your system
 # ---------------------------------------------------------------------------
 
-NEXTFLOW         = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain/OrthoBench/nextflow")
-OMAMER_DB        = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain/OrthoBench/fastoma_input/Metazoa.h5")
-BROCCOLI_SCRIPT  = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain/OrthoBench/brocolli/Broccoli-master/broccoli.py")
+NEXTFLOW         = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/nextflow")
+OMAMER_DB        = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/Metazoa.h5")
+BROCCOLI_SCRIPT  = Path("/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/Broccoli-master/broccoli.py")
 NEXTFLOW_WORKDIR = Path("/local/home/zool2506/w1")
-
+SPECIES_TREE = ("/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/empiricaldata_qfoOrthobench/OrthoBench/fastoma_input/species_tree.nwk")
 
 # ---------------------------------------------------------------------------
 # Helpers
