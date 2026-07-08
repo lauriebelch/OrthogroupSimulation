@@ -122,6 +122,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
     parent_selection_type = complete_parameters["parent_selection_type"]
     keep_parents = int(complete_parameters["keep_parents"])
     crossover_type = complete_parameters["crossover_type"]
+	keep_elitism=str(1)
     crossover_probability = float(complete_parameters["crossover_probability"])
     mutation_type = complete_parameters["mutation_type"]
     mutation_percent_genes = int(complete_parameters["mutation_percent_genes"])
@@ -140,6 +141,7 @@ def GA_workflow(complete_parameters, output_abolsute_path, threads, current_file
                        crossover_type=crossover_type,
                        crossover_probability = crossover_probability,
                        mutation_type=mutation_type,
+                       keep_elitism = keep_elitism,
                        on_generation=on_gen,
                        mutation_percent_genes=mutation_percent_genes,
                        save_solutions=True,
