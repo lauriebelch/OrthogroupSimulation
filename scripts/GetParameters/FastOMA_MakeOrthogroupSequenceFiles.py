@@ -193,6 +193,17 @@ def main(
         for record in SeqIO.parse(file_path, "fasta"):
             original_id = record.id.split()[0]
 
+            if original_id in gene_numeric:
+                raise ValueError(
+                    f"Duplicate gene ID '{original_id}' found while indexing "
+                    f"proteome '{species_name}'. gene_numeric is keyed only "
+                    f"by original ID (not species-qualified), so this gene "
+                    f"would silently overwrite a previously indexed sequence "
+                    f"and corrupt orthogroup sequence output. Check whether "
+                    f"'{original_id}' is reused across multiple species "
+                    f"proteomes."
+                )
+
             rec_num = record[:]
             rec_num.id = f"{species_id}_{original_id}"
             rec_num.name = rec_num.id

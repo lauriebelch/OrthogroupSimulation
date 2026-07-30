@@ -104,7 +104,7 @@ def FindRelevantSpeciesSplits(species_tree, represented_species):
 
         child_species_sets = [
             GetSpeciesUnderSpeciesNode(child)
-            for child in species_tree.get_children()
+            for child in children
         ]
         #print(child_species_sets)
         #print("###")

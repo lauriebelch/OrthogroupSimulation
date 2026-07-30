@@ -50,8 +50,8 @@ def main(orthofinder_folder, output_folder, n_threads):
     for fname in os.listdir(proteome_dir):
         if re.fullmatch(r"Species\d+\.fa", fname):
             species = fname.split("Species")[1].split(".fa")[0]
-            proteomes[species] = load_fasta(
-                os.path.join(proteome_dir, fname)
+            proteomes[species] = index_proteome_by_id(
+                load_fasta(os.path.join(proteome_dir, fname))
             )
 
     # --- STEP 4: read numeric orthogroups ---
@@ -317,12 +317,37 @@ def load_fasta(filepath):
     return sequences
 
 
-def find_sequence(gene_id, proteome_dict):
-    for header, seq in proteome_dict.items():
-        if gene_id in header:
-            return header, seq
+def index_proteome_by_id(proteome_dict):
+    """
+    Build an exact-match index from a loaded proteome.
 
-    return None, None
+    Keys are the gene ID (the first whitespace-separated token of the
+    FASTA header, matching how coded gene IDs are derived from
+    SequenceIDs.txt elsewhere in this script). Using an exact key instead
+    of substring matching avoids gene IDs like "0_5" incorrectly matching
+    headers such as "10_50" or "0_51".
+
+    Returns:
+        {gene_id: (header, seq), ...}
+    """
+    indexed = {}
+
+    for header, seq in proteome_dict.items():
+        gene_id = header.split()[0]
+
+        if gene_id in indexed:
+            raise ValueError(
+                f"Duplicate gene ID '{gene_id}' found in proteome "
+                f"(headers '{indexed[gene_id][0]}' and '{header}')."
+            )
+
+        indexed[gene_id] = (header, seq)
+
+    return indexed
+
+
+def find_sequence(gene_id, proteome_index):
+    return proteome_index.get(gene_id, (None, None))
 
 
 # ============================================================
