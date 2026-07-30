@@ -12,7 +12,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-N_ORTHOGROUPS_TO_SAMPLE = 100
+N_ORTHOGROUPS_TO_SAMPLE = 5000
 
 def write_list(output_dir, filename, values, fmt):
     with open(os.path.join(output_dir, filename), "w") as f:
@@ -509,7 +509,7 @@ def main(orthofinder_folder, output_folder, n_threads):
             full_path = os.path.join(orthogroup_seqs_dir, f)
             seq_count = count_fasta_seqs(full_path)
 
-            if 4 <= seq_count < 300:
+            if 4 <= seq_count < 500:
                 orthogroups.append(f)
 
     sampled = random.sample(

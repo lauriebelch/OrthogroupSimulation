@@ -122,7 +122,7 @@ def SimulateGeneTree(outname, args):
     # command to be run
     cmd = [
     "java", "-jar", str(args.sagephy_path), "GuestTreeGen",
-    "-a", "200",
+    "-a", "250",
     "-gb", "-gbc", str(args.gbc),
     "-vp", str(tag),
     "-p", str(args.leaf_sampling_probability),
@@ -153,6 +153,7 @@ def RelaxBranchLengths(outname, args):
     '''
     start = args.max_start_rate
     sigma = np.random.lognormal(mean=args.sigma_log_mean, sigma=args.sigma_log_sd) ** 2
+    sigma = min(sigma, 100)
     # define input path - pruned tree from sagephy
     input2 = os.path.join(str(args.o), 'temporary_files', str(outname)+".pruned.tree")
     # define output path - relaxed pruned tree
@@ -445,7 +446,8 @@ def SimulateAlignmentPartition(outname, args):
     root_seq_path = os.path.join(str(args.o), 'temporary_files', f"{outname}.root.seq")
     partition_path = os.path.join(str(args.o), 'temporary_files', str(outname)+".partionfile.txt")
     #indel_size = "GEO{2.5},GEO{2.5}"
-    indel_size = "GEO{1},GEO{1}"
+    indel_size = "POW{1.7/50},POW{2.2/40}"
+    #indel_size = "GEO{1},GEO{1}"
     # define output path
     output1 = os.path.join(str(args.o), 'temporary_files', str(outname) + ".alignment")
     # command to be run
@@ -464,7 +466,7 @@ def SimulateAlignmentPartition(outname, args):
         f.write(f"indel_delete={indel_delete}\n")
         f.write(f"indel_size={indel_size[indel_size.find('{')+1 : indel_size.find('}')]}\n")
     #subprocess.run(cmd, check=True, timeout=60)
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             result = subprocess.run(
                 cmd,

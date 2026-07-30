@@ -167,23 +167,15 @@ def main(sonic_output, sonic_input, output_base, n_threads, tool_tree):
     # ============================================================
     # Save numeric species tree using SAME species_to_id mapping
     # ============================================================
+    shutil.copy2(species_tree_src, species_tree_dst)
 
     save_numeric_species_tree(
         species_tree_src=species_tree_src,
-        numeric_species_tree_path=species_tree_dst,
+        numeric_species_tree_path=numeric_species_tree_path,
         species_mapping_path=species_mapping_path,
         species_to_id=species_to_id,
     )
 
-    save_numeric_species_tree(
-    species_tree_src=species_tree_src,
-    numeric_species_tree_path=numeric_species_tree_path,
-    species_mapping_path=species_mapping_path,
-    species_to_id=species_to_id,
-    )
-
-    shutil.copyfile(numeric_species_tree_path,species_tree_dst,)
-    
     print("SonicParanoid2 sequence generation complete.")
 
 

@@ -54,6 +54,10 @@ def GetSpeciesUnderGeneNode(gene_node):
 
 
 def GetSpeciesUnderSpeciesNode(species_node):
+    #print(species_node.leaves())
+    #print("species node")
+    #print(species_node.write(parser=1))
+    #print(species_node.leaf_names())
     return set(species_node.leaf_names())
 
 
@@ -88,23 +92,28 @@ def FindRelevantSpeciesSplits(species_tree, represented_species):
         C | rest
     """
     node = species_tree
+    
 
     while True:
         children = node.get_children()
-
+        #print("children")
+        #print(children)
+        
         if not children:
             return []
 
         child_species_sets = [
             GetSpeciesUnderSpeciesNode(child)
-            for child in children
+            for child in species_tree.get_children()
         ]
-
+        #print(child_species_sets)
+        #print("###")
+        #print(represented_species)
         have = [
             len(child_species & represented_species) > 0
             for child_species in child_species_sets
         ]
-
+        #print(have)
         if sum(have) >= 2:
             break
 
@@ -115,6 +124,8 @@ def FindRelevantSpeciesSplits(species_tree, represented_species):
 
     splits = []
 
+    #print(child_species_sets)
+    #print("###")
     for child_species in child_species_sets:
         outgroup_species = child_species & represented_species
         ingroup_species = represented_species - outgroup_species
@@ -124,7 +135,7 @@ def FindRelevantSpeciesSplits(species_tree, represented_species):
 
         if not ingroup_species:
             continue
-
+        
         splits.append({
             "species_lca_name": node.name,
             "outgroup_species": outgroup_species,
@@ -307,7 +318,7 @@ def FindBestGeneRoot(gene_tree, species_tree, represented_species):
         species_tree,
         represented_species,
     )
-
+    #print(splits)
     if not splits:
         return None, 0
 
@@ -381,7 +392,6 @@ def RootGeneTreeWithSpeciesTree(gene_tree, species_tree):
         species_tree,
         represented_species,
     )
-
     info["candidate_count"] = n_splits
 
     if root_candidate is None:

@@ -1,9 +1,9 @@
-output=GA_TEST_OUTPUT
-Orthogroup_train_results=PARAMETERS_FOLDER
+output=/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/GA_FastOMA
+Orthogroup_train_results=/local/home/zool2506/SIM_TRAINING/OrthoTrain_analysis/Training_FastOMA_OB
 generations=5
 sample_size=100
 num_parents_mating=4
-sol_per_pop=4
+sol_per_pop=16
 num_genes=4
 parent_selection_type=nsga2
 keep_parents=1
